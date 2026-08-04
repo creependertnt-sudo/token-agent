@@ -1,0 +1,584 @@
+@import "tailwindcss";
+
+:root {
+  --background: #070b12;
+  --foreground: #e8eef8;
+  --panel: #0d1420;
+  --panel-border: #1c2738;
+  --accent: #2dd4bf;
+  --accent-soft: rgba(45, 212, 191, 0.12);
+  --muted: #8b9bb4;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-panel: var(--panel);
+  --color-panel-border: var(--panel-border);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-muted: var(--muted);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), "Segoe UI", sans-serif;
+  min-height: 100%;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #2a3a52 transparent;
+}
+
+/* AI Markdown 气泡样式 */
+.markdown-body {
+  color: var(--foreground);
+  word-break: break-word;
+}
+
+.markdown-body > *:first-child {
+  margin-top: 0;
+}
+
+.markdown-body > *:last-child {
+  margin-bottom: 0;
+}
+
+.markdown-body p {
+  margin: 0.55rem 0;
+  line-height: 1.65;
+}
+
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3,
+.markdown-body h4 {
+  margin: 0.85rem 0 0.45rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: #f3f7ff;
+}
+
+.markdown-body h1 {
+  font-size: 1.05rem;
+}
+
+.markdown-body h2 {
+  font-size: 1rem;
+}
+
+.markdown-body h3,
+.markdown-body h4 {
+  font-size: 0.95rem;
+}
+
+.markdown-body strong {
+  font-weight: 650;
+  color: #f8fbff;
+}
+
+.markdown-body em {
+  font-style: italic;
+  color: #d7e2f3;
+}
+
+.markdown-body a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.markdown-body ul,
+.markdown-body ol {
+  margin: 0.55rem 0;
+  padding-left: 1.25rem;
+}
+
+.markdown-body ul {
+  list-style: disc;
+}
+
+.markdown-body ol {
+  list-style: decimal;
+}
+
+.markdown-body li {
+  margin: 0.28rem 0;
+  line-height: 1.6;
+}
+
+.markdown-body li > ul,
+.markdown-body li > ol {
+  margin: 0.25rem 0;
+}
+
+.markdown-body blockquote {
+  margin: 0.7rem 0;
+  padding: 0.45rem 0.8rem;
+  border-left: 3px solid var(--accent);
+  border-radius: 0 0.75rem 0.75rem 0;
+  background: rgba(45, 212, 191, 0.08);
+  color: #c9d6ea;
+}
+
+.markdown-body hr {
+  margin: 0.9rem 0;
+  border: none;
+  border-top: 1px solid var(--panel-border);
+}
+
+.markdown-body code {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.84em;
+  padding: 0.12rem 0.35rem;
+  border-radius: 0.4rem;
+  background: rgba(0, 0, 0, 0.35);
+  color: #b8f5e8;
+}
+
+.markdown-body pre {
+  margin: 0.75rem 0;
+  padding: 0.85rem 1rem;
+  overflow-x: auto;
+  border-radius: 0.9rem;
+  border: 1px solid var(--panel-border);
+  background: #080e17;
+}
+
+.markdown-body pre code {
+  padding: 0;
+  background: transparent;
+  color: #d7e8ff;
+  font-size: 0.8rem;
+  line-height: 1.55;
+  white-space: pre;
+}
+
+/* Markdown 代码块：语言标识 + 复制 + 长代码折叠 */
+.md-code-block {
+  position: relative;
+  margin: 0.75rem 0;
+  border-radius: 0.9rem;
+  border: 1px solid var(--panel-border);
+  background: #080e17;
+  overflow: hidden;
+}
+
+.md-code-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0.4rem 0.65rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--panel-border) 85%, transparent);
+  background: rgba(12, 18, 28, 0.95);
+}
+
+.md-code-lang {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.md-code-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.md-code-btn {
+  border: 1px solid transparent;
+  border-radius: 0.45rem;
+  background: transparent;
+  padding: 0.2rem 0.45rem;
+  font-size: 0.6875rem;
+  color: var(--muted);
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+}
+
+.md-code-btn:hover {
+  color: var(--foreground);
+  background: rgba(255, 255, 255, 0.04);
+  border-color: var(--panel-border);
+}
+
+.md-code-pre {
+  margin: 0 !important;
+  padding: 0.75rem 0.9rem !important;
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  overflow-x: auto;
+  max-height: none;
+}
+
+.md-code-block.is-collapsed .md-code-pre {
+  max-height: 11.5rem;
+  overflow: hidden;
+  mask-image: linear-gradient(to bottom, #000 55%, transparent 100%);
+}
+
+.md-code-fade-btn {
+  position: absolute;
+  left: 50%;
+  bottom: 0.55rem;
+  transform: translateX(-50%);
+  border: 1px solid var(--panel-border);
+  border-radius: 999px;
+  background: rgba(13, 20, 32, 0.92);
+  padding: 0.25rem 0.75rem;
+  font-size: 0.6875rem;
+  color: var(--accent);
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+}
+
+.md-code-fade-btn:hover {
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--panel-border));
+}
+
+.markdown-body .md-table-scroll {
+  margin: 0.75rem 0;
+  max-width: 100%;
+  overflow-x: auto;
+  border-radius: 0.75rem;
+  border: 1px solid var(--panel-border);
+  background: #0a111b;
+}
+
+.markdown-body .md-table-scroll table {
+  display: table;
+  width: 100%;
+  margin: 0;
+  border: none;
+  border-radius: 0;
+  overflow: visible;
+}
+
+.markdown-body .md-table-scroll th:first-child,
+.markdown-body .md-table-scroll td:first-child {
+  border-left: none;
+}
+
+.markdown-body .md-table-scroll th:last-child,
+.markdown-body .md-table-scroll td:last-child {
+  border-right: none;
+}
+
+.markdown-body .md-table-scroll tr:first-child th {
+  border-top: none;
+}
+
+.markdown-body .md-table-scroll tr:last-child td {
+  border-bottom: none;
+}
+
+.markdown-body table {
+  margin: 0.75rem 0;
+  border-collapse: collapse;
+  border-spacing: 0;
+  border: 1px solid var(--panel-border);
+  border-radius: 0.75rem;
+  overflow: hidden;
+  background: #0a111b;
+}
+
+.markdown-body thead {
+  background: rgba(45, 212, 191, 0.1);
+}
+
+.markdown-body th,
+.markdown-body td {
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--panel-border);
+  text-align: left;
+  vertical-align: top;
+  white-space: nowrap;
+}
+
+.markdown-body th {
+  font-weight: 600;
+  color: #eaf7f4;
+  font-size: 0.8rem;
+}
+
+.markdown-body td {
+  color: #d5e0f0;
+  font-size: 0.8rem;
+}
+
+.markdown-body tr:nth-child(even) td {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+/* ========== Discord / ChatGPT 宽聊天气泡布局 ========== */
+
+/* 聊天内容区：少留左右空白，取消 ~768px 窄列 */
+.chat-thread {
+  box-sizing: border-box;
+  width: calc(100% - 80px);
+  max-width: 90rem; /* ~1440px，大屏可用更宽 */
+  margin-inline: auto;
+}
+
+@media (max-width: 640px) {
+  .chat-thread {
+    width: calc(100% - 32px);
+  }
+}
+
+.chat-row {
+  display: flex;
+  width: 100%;
+}
+
+.chat-row-assistant {
+  justify-content: flex-start;
+  padding-right: 2.5rem; /* 对侧留白，不贴边 */
+}
+
+.chat-row-user {
+  justify-content: flex-end;
+  padding-left: 2.5rem;
+}
+
+.assistant-message,
+.user-message {
+  display: flex;
+  align-items: flex-start; /* 头像与名称顶部对齐 */
+  gap: 12px; /* 头像与气泡 10–16px */
+  max-width: 100%;
+}
+
+.user-message {
+  flex-direction: row-reverse; /* 头像紧贴气泡右侧 */
+  margin-left: auto;
+  gap: 10px; /* 用户侧更紧凑 */
+}
+
+.avatar {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  min-height: 36px;
+  max-width: 36px;
+  max-height: 36px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 0;
+  overflow: hidden;
+}
+
+.assistant-content,
+.user-content {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 0 1 auto;
+  gap: 2px;
+}
+
+.assistant-content {
+  align-items: flex-start;
+  max-width: min(90%, calc(100% - 48px)); /* AI 保持较宽可读区 */
+}
+
+.user-content {
+  /* 列宽跟 header/气泡中较宽者，不强制撑满整行 */
+  width: fit-content;
+  max-width: 100%;
+  align-items: flex-end;
+  min-width: 0;
+}
+
+.chat-row-user .user-message {
+  width: fit-content;
+  max-width: 70%;
+  margin-left: auto;
+}
+
+.assistant-header,
+.user-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  line-height: 1.2;
+  min-height: 1.2em;
+}
+
+.user-header {
+  justify-content: flex-end;
+  flex-direction: row; /* 用户名在左、时间在右，整体贴头像侧 */
+  gap: 8px;
+  margin-bottom: 2px;
+}
+
+/* AI Header：名称/时间一行，来源与档位换行，避免挤成一行 */
+.assistant-header {
+  display: block;
+  width: 100%;
+  min-height: 0;
+}
+
+.assistant-header-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  width: 100%;
+}
+
+.assistant-header-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.assistant-header-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.msg-chip {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  border-radius: 0.4rem;
+  border: 1px solid color-mix(in srgb, var(--panel-border) 90%, transparent);
+  background: rgba(10, 17, 27, 0.75);
+  padding: 0.1rem 0.4rem;
+  font-size: 0.625rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.msg-chip-cost {
+  color: color-mix(in srgb, var(--accent) 75%, var(--muted));
+  border-color: color-mix(in srgb, var(--accent) 28%, var(--panel-border));
+}
+
+.msg-name {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.msg-meta {
+  font-size: 0.6875rem;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+/* 已废弃：不再在用户名旁显示「用户」标签 */
+.msg-tag {
+  display: none;
+}
+
+.msg-time {
+  font-size: 0.6875rem;
+  color: color-mix(in srgb, var(--muted) 80%, transparent);
+}
+
+.bubble {
+  border-radius: 12px;
+  padding: 10px 14px;
+  max-width: 100%;
+  width: fit-content;
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+.bubble-ai {
+  border: 1px solid color-mix(in srgb, var(--panel-border) 80%, transparent);
+  background: rgba(17, 24, 39, 0.88);
+  color: var(--foreground);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.14);
+  border-top-left-radius: 4px;
+  /* AI 气泡可用较宽区域，由 .assistant-content max-width: 90% 约束 */
+  max-width: 100%;
+}
+
+.bubble-user {
+  display: inline-block;
+  background: #2a3a55;
+  color: var(--foreground);
+  border-top-right-radius: 4px;
+  text-align: left;
+  width: fit-content;
+  max-width: 100%;
+  min-width: 0;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  box-sizing: border-box;
+  align-self: flex-end;
+}
+
+.bubble-user p {
+  margin: 0;
+  width: fit-content;
+  max-width: 100%;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+.msg-cost-status {
+  margin: 4px 0 0;
+  padding: 0;
+  font-size: 0.6875rem;
+  line-height: 1.3;
+  color: color-mix(in srgb, var(--muted) 88%, transparent);
+  opacity: 0.9;
+  font-weight: 400;
+}
+
+.msg-cost-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: none;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.msg-cost-toggle:disabled {
+  cursor: default;
+}
+
+.msg-cost-toggle:not(:disabled):hover {
+  color: var(--foreground);
+}
+
+.msg-cost-caret {
+  font-size: 0.625rem;
+  opacity: 0.8;
+}
+
+.msg-cost-detail {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  margin-top: 4px;
+  padding-left: 1px;
+  color: color-mix(in srgb, var(--muted) 92%, transparent);
+}
+
