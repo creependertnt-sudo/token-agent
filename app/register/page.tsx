@@ -83,7 +83,7 @@ export default function RegisterPage() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-xl border border-panel-border bg-[#0a111b] px-4 py-3 text-sm text-foreground outline-none focus:border-accent/50"
+              className="w-full rounded-xl border border-panel-border bg-card px-4 py-3 text-sm text-foreground outline-none focus:border-accent/50"
               required
             />
           </div>
@@ -95,7 +95,7 @@ export default function RegisterPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               minLength={6}
-              className="w-full rounded-xl border border-panel-border bg-[#0a111b] px-4 py-3 text-sm text-foreground outline-none focus:border-accent/50"
+              className="w-full rounded-xl border border-panel-border bg-card px-4 py-3 text-sm text-foreground outline-none focus:border-accent/50"
               required
             />
           </div>

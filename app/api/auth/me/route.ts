@@ -7,22 +7,37 @@ import {
 import { NextResponse } from "next/server";
 
 export async function GET() {
-  const user = await getCurrentUser();
+  try {
+    const user = await getCurrentUser();
 
-  if (!user) {
-    return NextResponse.json({ error: "未登录。" }, { status: 401 });
+    if (!user) {
+      console.log("[api/auth/me] 401: no current user");
+      return NextResponse.json({ error: "未登录。" }, { status: 401 });
+    }
+
+    const nickname = displayNickname(user.nickname);
+    const avatar = user.avatar?.trim() || avatarInitials(user.nickname);
+
+    const payload = {
+      user: {
+        ...user,
+        nickname,
+        avatar,
+      },
+    };
+    console.log("[api/auth/me] 200:", {
+      id: payload.user.id,
+      email: payload.user.email,
+      theme: payload.user.theme,
+    });
+    return NextResponse.json(payload);
+  } catch (error) {
+    console.error("[api/auth/me] 500:", error);
+    return NextResponse.json(
+      { error: "获取用户信息失败，请稍后重试。" },
+      { status: 500 },
+    );
   }
-
-  const nickname = displayNickname(user.nickname);
-  const avatar = user.avatar?.trim() || avatarInitials(user.nickname);
-
-  return NextResponse.json({
-    user: {
-      ...user,
-      nickname,
-      avatar,
-    },
-  });
 }
 
 /** @deprecated 请使用 PATCH /api/user/profile；保留兼容 */
@@ -58,6 +73,7 @@ export async function PATCH(req: Request) {
         email: true,
         nickname: true,
         avatar: true,
+        theme: true,
         tokenBalance: true,
         freeChatCount: true,
       },
@@ -68,6 +84,7 @@ export async function PATCH(req: Request) {
         ...updated,
         nickname: displayNickname(updated.nickname),
         avatar: updated.avatar ?? avatar,
+        theme: updated.theme,
       },
     });
   } catch (error) {

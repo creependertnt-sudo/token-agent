@@ -1,6 +1,8 @@
 import { requireCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { OrderStatus } from "@/app/generated/prisma/enums";
+import { extractAndUpdateCustomerMemory } from "@/lib/customer-memory";
+import { markSalesConversionPaid } from "@/lib/sales-conversion-log";
 import { NextResponse } from "next/server";
 
 type Params = { params: Promise<{ id: string }> };
@@ -84,6 +86,39 @@ export async function POST(_req: Request, { params }: Params) {
         freeChatCount: true,
       },
     });
+
+    try {
+      await markSalesConversionPaid({
+        userId: user.id,
+        packageId: order.packageId,
+      });
+      await prisma.agentLog.updateMany({
+        where: {
+          userId: order.userId,
+          purchased: false,
+        },
+        data: {
+          purchased: true,
+        },
+      });
+      void prisma.conversionAnalytics
+        .create({
+          data: {
+            packageId: order.packageId,
+            action: "PAID",
+          },
+        })
+        .catch((error) => {
+          console.error("[conversion-analytics]", error);
+        });
+      await extractAndUpdateCustomerMemory({
+        userId: user.id,
+        userMessage: `支付成功：${order.package.name}`,
+        intent: "PRICE_QUERY",
+      });
+    } catch (sideError) {
+      console.error("Pay success side effects:", sideError);
+    }
 
     return NextResponse.json({
       order: {

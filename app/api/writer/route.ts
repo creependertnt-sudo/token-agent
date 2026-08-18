@@ -1,10 +1,18 @@
 import { requireCurrentUser } from "@/lib/auth";
 import { FEATURE_TOKEN_COST } from "@/lib/constants";
 import {
-  consumeFeatureToken,
+  beginTokenTransaction,
+  confirmTokenTransaction,
+  failTokenTransaction,
   TokenNotEnoughError,
   tokenNotEnoughResponse,
 } from "@/lib/tokens";
+import { resolveUserQuota } from "@/lib/user-quota";
+import {
+  assertUserRateLimit,
+  RateLimitError,
+  rateLimitResponse,
+} from "@/lib/rate-limit";
 import OpenAI from "openai";
 import { NextResponse } from "next/server";
 
@@ -22,6 +30,8 @@ const WRITER_SYSTEM = `你是专业的 AI 写作助手，根据用户提供的�
  * AI 写作助手：每次消耗 50 Token。
  */
 export async function POST(req: Request) {
+  let hold: Awaited<ReturnType<typeof beginTokenTransaction>> | null = null;
+  let consumeCommitted = false;
   try {
     const user = await requireCurrentUser();
     if (!user) {
@@ -47,9 +57,22 @@ export async function POST(req: Request) {
       );
     }
 
-    let updatedUser;
+    const quota = await resolveUserQuota(user.id);
     try {
-      updatedUser = await consumeFeatureToken(user.id, "writing");
+      await assertUserRateLimit(user.id, quota);
+    } catch (error) {
+      if (error instanceof RateLimitError) {
+        return rateLimitResponse(error);
+      }
+      throw error;
+    }
+
+    try {
+      hold = await beginTokenTransaction({
+        userId: user.id,
+        amount: FEATURE_TOKEN_COST.writing,
+        reason: "feature:writing",
+      });
     } catch (error) {
       if (error instanceof TokenNotEnoughError) {
         return tokenNotEnoughResponse(error);
@@ -74,18 +97,35 @@ export async function POST(req: Request) {
     });
 
     const content = completion.choices[0]?.message?.content?.trim() ?? "";
+    if (!content) {
+      throw new Error("AI 未返回内容。");
+    }
+
+    const confirmed = await confirmTokenTransaction(hold.id);
+    consumeCommitted = true;
 
     return NextResponse.json({
       content,
-      tokenBalance: updatedUser.tokenBalance,
-      freeChatCount: updatedUser.freeChatCount,
+      tokenBalance: confirmed.tokenBalance,
+      freeChatCount: confirmed.freeChatCount,
       cost: FEATURE_TOKEN_COST.writing,
     });
   } catch (error) {
     console.error("Writer API error:", error);
+    if (error instanceof RateLimitError) {
+      return rateLimitResponse(error);
+    }
     if (error instanceof TokenNotEnoughError) {
       return tokenNotEnoughResponse(error);
     }
     return NextResponse.json({ error: "生成失败，请稍后重试。" }, { status: 500 });
+  } finally {
+    if (hold && !consumeCommitted) {
+      try {
+        await failTokenTransaction(hold.id);
+      } catch (releaseError) {
+        console.error("Token refund failed:", releaseError);
+      }
+    }
   }
 }

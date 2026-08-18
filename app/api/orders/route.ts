@@ -1,6 +1,7 @@
 import { requireCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { OrderStatus } from "@/app/generated/prisma/enums";
+import { markSalesConversionClicked } from "@/lib/sales-conversion-log";
 import { NextResponse } from "next/server";
 
 /**
@@ -44,6 +45,11 @@ export async function POST(req: Request) {
         amount: pkg.price,
         status: OrderStatus.PENDING,
       },
+    });
+
+    await markSalesConversionClicked({
+      userId: user.id,
+      packageId: pkg.id,
     });
 
     return NextResponse.json({

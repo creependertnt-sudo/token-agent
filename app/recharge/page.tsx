@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
 import { authFetch } from "@/lib/client-auth";
@@ -31,6 +31,21 @@ export default function RechargePage() {
   const [pendingOrder, setPendingOrder] = useState<PendingOrder | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [highlightId, setHighlightId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const highlightRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get("package");
+    setHighlightId(id);
+    setSelectedId(id);
+    if (id) {
+      void authFetch("/api/sales/conversions/click", {
+        method: "POST",
+        body: JSON.stringify({ packageId: id }),
+      }).catch(() => undefined);
+    }
+  }, []);
 
   useEffect(() => {
     if (authLoading || !user) return;
@@ -49,6 +64,21 @@ export default function RechargePage() {
 
     void load();
   }, [authLoading, user]);
+
+  const orderedProducts = useMemo(() => {
+    if (!highlightId) return products;
+    const hit = products.find((p) => p.id === highlightId);
+    if (!hit) return products;
+    return [hit, ...products.filter((p) => p.id !== highlightId)];
+  }, [products, highlightId]);
+
+  useEffect(() => {
+    if (!highlightId || loading) return;
+    highlightRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+    });
+  }, [highlightId, loading, products]);
 
   async function handleBuy(productId: string) {
     setBuyingId(productId);
@@ -146,6 +176,9 @@ export default function RechargePage() {
             </h1>
             <p className="mt-2 text-sm text-muted">
               Token 为 AI 服务额度；创建订单后模拟支付成功即可到账。
+              {highlightId
+                ? " 销售顾问已为你标出推荐套餐。"
+                : ""}
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -213,16 +246,26 @@ export default function RechargePage() {
         )}
 
         <div className="grid gap-4 md:grid-cols-3">
-          {products.map((product, index) => (
+          {orderedProducts.map((product, index) => {
+            const recommended = highlightId === product.id;
+            const selected = selectedId === product.id;
+            return (
             <motion.div
               key={product.id}
+              ref={recommended ? highlightRef : undefined}
+              id={`package-${product.id}`}
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.06 }}
-              className="rounded-3xl border border-panel-border bg-panel p-5 shadow-xl"
+              onClick={() => setSelectedId(product.id)}
+              className={`rounded-3xl border bg-panel p-5 shadow-xl ${
+                selected || recommended
+                  ? "border-accent ring-2 ring-accent/30"
+                  : "border-panel-border"
+              }`}
             >
               <p className="text-[11px] tracking-[0.16em] text-accent uppercase">
-                Package
+                {recommended ? "Recommended" : selected ? "Selected" : "Package"}
               </p>
               <h2 className="mt-2 text-xl font-semibold text-foreground">
                 {product.name}
@@ -240,10 +283,13 @@ export default function RechargePage() {
                 onClick={() => void handleBuy(product.id)}
                 className="mt-6 w-full rounded-xl bg-accent px-4 py-3 text-sm font-semibold text-[#042f2e] transition hover:brightness-110 disabled:opacity-50"
               >
-                {buyingId === product.id ? "下单中..." : "立即购买"}
+                {buyingId === product.id
+                  ? "下单中..."
+                  : `立即购买【${product.name}】`}
               </button>
             </motion.div>
-          ))}
+            );
+          })}
         </div>
 
         {products.length === 0 && (

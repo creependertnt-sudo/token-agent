@@ -10,6 +10,8 @@ export type ModelConfigRow = {
   tokenCost: number;
   maxContext: number;
   systemInstructions: string;
+  enableReasoning: boolean;
+  memoryRounds: number;
   keywords: string;
 };
 
@@ -35,6 +37,8 @@ function mapRow(r: {
   tokenCost: number;
   maxContext: number;
   systemInstructions: string;
+  enableReasoning: boolean;
+  memoryRounds: number;
   keywords: string;
 }): ModelConfigRow {
   return {
@@ -47,6 +51,8 @@ function mapRow(r: {
     tokenCost: r.tokenCost,
     maxContext: r.maxContext,
     systemInstructions: r.systemInstructions,
+    enableReasoning: r.enableReasoning,
+    memoryRounds: r.memoryRounds,
     keywords: r.keywords,
   };
 }
@@ -63,6 +69,35 @@ export async function getModelConfig(
 ): Promise<ModelConfigRow | null> {
   const r = await prisma.modelConfig.findUnique({ where: { serviceType } });
   return r ? mapRow(r) : null;
+}
+
+/**
+ * SALES 默认 false；付费档读 ModelConfig.enableReasoning。
+ * 表无记录时：PREMIUM true，其余 false。
+ */
+export async function resolveEnableReasoning(
+  serviceType: string,
+): Promise<boolean> {
+  if (serviceType === "SALES") return false;
+  const cfg = await getModelConfig(serviceType);
+  if (cfg) return Boolean(cfg.enableReasoning);
+  return serviceType === "PREMIUM";
+}
+
+/**
+ * 短期记忆轮数：读 ModelConfig.memoryRounds；SALES / 缺省为 16。
+ * LIGHT 默认偏短、PREMIUM 偏长（由 seed 写入，可改库）。
+ */
+export async function resolveMemoryRounds(
+  serviceType: string,
+): Promise<number> {
+  if (serviceType === "SALES") return 16;
+  const cfg = await getModelConfig(serviceType);
+  if (cfg && cfg.memoryRounds > 0) return cfg.memoryRounds;
+  if (serviceType === "LIGHT") return 6;
+  if (serviceType === "STANDARD") return 12;
+  if (serviceType === "PREMIUM") return 16;
+  return 16;
 }
 
 /** 从用户话中解析要比较的等级，如「A和C」「LIGHT 和 PREMIUM」 */
@@ -182,5 +217,7 @@ Token 价格：${config.tokenCost} / 次
 能力描述：${config.capability}
 适用场景：${config.suitableFor}
 限制：${config.limitations}
-行为说明：${config.systemInstructions || "（无 systemInstructions，仅按能力与限制作答）"}`;
+行为说明：${config.systemInstructions || "（无 systemInstructions，仅按能力与限制作答）"}
+思考模式 enableReasoning：${config.enableReasoning ? "开" : "关"}
+短期记忆轮数 memoryRounds：${config.memoryRounds}`;
 }

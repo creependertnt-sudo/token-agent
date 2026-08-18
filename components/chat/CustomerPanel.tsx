@@ -53,7 +53,8 @@ export function CustomerPanel({
       </div>
 
       <div className="flex-1 space-y-4 overflow-y-auto px-5 py-5">
-        <div className="flex items-center gap-3">
+        {/* 用户信息 */}
+        <div className="flex items-center gap-3 rounded-2xl border border-panel-border bg-card p-4 shadow-sm">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-400 to-teal-500 text-sm font-bold text-[#042f2e]">
             {avatar.slice(0, 2)}
           </div>
@@ -72,7 +73,8 @@ export function CustomerPanel({
           </div>
         </div>
 
-        <div className="rounded-2xl border border-panel-border bg-[#0a111b] p-4">
+        {/* Token 余额 */}
+        <div className="rounded-2xl border border-panel-border bg-card p-4 shadow-sm">
           <p className="text-xs text-muted">AI服务额度</p>
           <p className="mt-1 text-3xl font-semibold text-accent">
             {user.tokenBalance.toLocaleString()}
@@ -97,7 +99,8 @@ export function CustomerPanel({
           </div>
         </div>
 
-        <div className="space-y-3">
+        {/* 菜单 / 会话信息 */}
+        <div className="space-y-2 rounded-2xl border border-panel-border bg-card p-3 shadow-sm">
           <InfoRow label="用户 ID" value={user.id.slice(0, 10) + "…"} />
           <InfoRow label="会话消息" value={`${messageCount} 条`} />
           <InfoRow
@@ -111,20 +114,22 @@ export function CustomerPanel({
       </div>
 
       <div className="shrink-0 border-t border-panel-border p-4">
-        <button
-          type="button"
-          onClick={onLogout}
-          className="w-full rounded-xl border border-panel-border px-4 py-2.5 text-sm text-muted transition hover:border-red-400/40 hover:text-red-300"
-        >
-          退出登录
-        </button>
+        <div className="rounded-2xl border border-panel-border bg-card p-2 shadow-sm">
+          <button
+            type="button"
+            onClick={onLogout}
+            className="w-full rounded-xl border border-panel-border px-4 py-2.5 text-sm text-muted transition hover:border-red-400/40 hover:text-red-500"
+          >
+            退出登录
+          </button>
+        </div>
       </div>
     </div>
   );
 
   return (
     <>
-      <aside className="sticky top-0 hidden h-screen w-[300px] shrink-0 overflow-hidden border-r border-panel-border bg-panel lg:block">
+      <aside className="sticky top-0 hidden h-screen w-[300px] shrink-0 overflow-hidden border-r border-panel-border bg-sidebar lg:block">
         {panelBody}
       </aside>
 
@@ -141,7 +146,7 @@ export function CustomerPanel({
               onClick={onClose}
             />
             <motion.aside
-              className="fixed inset-y-0 left-0 z-50 h-screen w-[86%] max-w-sm overflow-hidden border-r border-panel-border bg-panel lg:hidden"
+              className="fixed inset-y-0 left-0 z-50 h-screen w-[86%] max-w-sm overflow-hidden border-r border-panel-border bg-sidebar lg:hidden"
               initial={{ x: "-100%" }}
               animate={{ x: 0 }}
               exit={{ x: "-100%" }}
@@ -168,7 +173,7 @@ export function CustomerPanel({
 
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center justify-between gap-3 rounded-xl border border-panel-border/80 bg-[#0a111b] px-3 py-2.5">
+    <div className="flex items-center justify-between gap-3 rounded-xl border border-panel-border/70 bg-sidebar/55 px-3 py-2.5">
       <span className="text-xs text-muted">{label}</span>
       <span className="truncate text-xs font-medium text-foreground">{value}</span>
     </div>

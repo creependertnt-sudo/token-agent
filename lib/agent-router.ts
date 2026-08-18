@@ -242,12 +242,12 @@ function memoryBlock(memories: MemoryItem[]) {
   });
 
   if (safe.length === 0) {
-    return `【长期记忆】
+    return `【重要记忆】
 暂无已保存记忆。`;
   }
 
   const lines = safe.map((m) => `- [${m.category}] ${m.content}`);
-  return `【长期记忆】
+  return `【重要记忆】
 ${lines.join("\n")}`;
 }
 
@@ -281,6 +281,9 @@ type AgentPromptInput = {
     modelsText: string;
     intent?: string;
     showProducts?: boolean;
+    pushStrategy?: string;
+    conversionHint?: string;
+    rechargePath?: string;
   };
   /** SALES RAG / 决策 / 需求分析 / 能力与竞品（流水线合并上下文） */
   salesKnowledgeText?: string;
@@ -377,11 +380,6 @@ ${modelConfig.systemInstructions ? `行为说明：\n${modelConfig.systemInstruc
 【销售知识库检索结果】
 ${knowledgeBlock}`;
 
-      const liveCatalog = salesCatalog
-        ? `【实时套餐目录（仅用户明确问价格/购买时引用数字）】
-${salesCatalog.packagesText}`
-        : "";
-
       return `你是「Token AI客服」——平台免费销售转化顾问（SALES 通道）。
 
 ${identityBlock}
@@ -397,23 +395,26 @@ ${identityBlock}
 
 【回答依据】
 1. 流水线：意图 → 查库 → 模型/套餐/竞品 → 回复
-2. 数据库：ModelConfig / ModelCapability / CompetitorKnowledge / SalesStrategy / CustomerProfile / ModelRecommendRule / SalesKnowledge(RAG)
-3. A/B/C 介绍、区别、适用场景只引用 ModelConfig/ModelCapability，禁止臆造
-4. 套餐数字仅问价/购买时引用
-5. 禁止贬低 Coze/Dify/FastGPT/Chatbase
+2. 数据库：ModelConfig / ModelCapability / CompetitorKnowledge / SalesStrategy / CustomerProfile / ModelRecommendRule / SalesKnowledge(RAG) / CustomerMemory
+3. 老用户优先参考 CustomerMemory（行业/需求/预算/痛点/阶段/购买/推荐/偏好）
+4. 按客户阶段组织话术：NEW / INTERESTED / COMPARING / READY_TO_BUY / CUSTOMER
+5. A/B/C 介绍、区别、适用场景只引用 ModelConfig/ModelCapability，禁止臆造
+6. 套餐数字：用户明确问套餐/价格表时必须调用 query_packages，只引用工具返回的数据；推销时只引用【当前推荐套餐】一条，禁止无提示甩全部套餐
+7. 禁止贬低 Coze/Dify/FastGPT/Chatbase 及其他竞品
+8. 不要在回复中输出思考过程或 reasoning 内容
+9. 竞品价格：CompetitorKnowledge 未写明的对方报价一律未知。禁止猜测、禁止编造「比 OpenAI 便宜 30%」这类未经验证数据。应说明无法确认对方实时价格，然后介绍自身计费方式、Token 套餐、模型选择与成本控制优势，最后问：您主要是用于 API 调用、AI 客服，还是个人开发？
 
 【禁止】
 - 不要每次固定输出整页套餐列表
 - 不要自称付费模型身份
 - 不要输出扣费套话
+- 不要编造未出现在 CompetitorKnowledge 中的竞品价格
 
 用户余额（仅供参考）：${tokenBalance} Token。
-${salesCatalog?.showProducts ? "提示：用户已表达购买/充值意图，可简明给出套餐与 /recharge。" : "提示：当前偏咨询，优先问诊与推荐通道。"}
+${salesCatalog?.conversionHint?.trim() || (salesCatalog?.showProducts ? "提示：本轮可推荐最终套餐并引导购买，禁止罗列全部套餐。" : "提示：当前偏咨询，优先问诊与推荐通道。")}
 
 【本轮流水线结果】
 ${pipelineBlock}
-
-${liveCatalog}
 
 ${mem}`;
     }
@@ -454,7 +455,7 @@ export function buildLockReminder(serviceType: ChatServiceType): string {
     .join("、");
 
   if (serviceType === "SALES") {
-    return `再次确认：本轮 selectedServiceType=SALES，对外身份=Token AI客服。必须执行【本轮销售决策】：先看意图与客户类型；未就绪先问诊；就绪则推荐 LIGHT/STANDARD/PREMIUM。竞品对比不攻击 Coze/Dify/FastGPT/Chatbase。禁止无脑甩套餐与扣费套话。`;
+    return `再次确认：本轮 selectedServiceType=SALES，对外身份=Token AI客服。必须执行【销售决策】与【转化动作】：按推进策略组织话术；只推荐最终套餐，禁止罗列全部套餐目录；未就绪先问诊。竞品对比不攻击、不编造对方价格；未命中竞品报价时说明无法提供实时竞品价格，再介绍自家计费与套餐并询问使用场景。禁止无脑甩套餐与扣费套话。`;
   }
 
   return `再次确认：本轮唯一锁定 selectedServiceType=${serviceType}，模型身份=${cfg.name}，费用=${cfg.cost === 0 ? "免费" : `${cfg.cost} Token`}。禁止自称 ${forbidden}。禁止输出「本轮服务为」「固定消耗」「已扣除余额」等扣费句。`;

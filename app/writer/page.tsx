@@ -47,7 +47,11 @@ export default function WriterPage() {
       }
 
       if (!response.ok) {
-        throw new Error(data.error ?? "生成失败");
+        throw new Error(
+          data.error === "RATE_LIMITED"
+            ? (data.message ?? "请求过于频繁，请稍后再试。")
+            : (data.error ?? data.message ?? "生成失败"),
+        );
       }
 
       setResult(data.content ?? "");
@@ -128,7 +132,7 @@ export default function WriterPage() {
             onChange={(e) => setProductInfo(e.target.value)}
             rows={6}
             placeholder="例如：产品名、核心卖点、目标客群、价格与活动…"
-            className="mt-2 w-full rounded-2xl border border-panel-border bg-[#0a111b] px-4 py-3 text-sm text-foreground outline-none focus:border-accent/50"
+            className="mt-2 w-full rounded-2xl border border-panel-border bg-card px-4 py-3 text-sm text-foreground outline-none focus:border-accent/50"
           />
           {error && (
             <p className="mt-3 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-2 text-sm text-red-300">

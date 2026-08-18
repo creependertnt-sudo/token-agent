@@ -53,6 +53,7 @@ export async function POST(req: Request) {
         email: true,
         nickname: true,
         avatar: true,
+        theme: true,
         tokenBalance: true,
         freeChatCount: true,
       },

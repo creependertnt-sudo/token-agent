@@ -45,6 +45,7 @@ export async function POST(req: Request) {
       email: user.email,
       nickname: displayNickname(nickname),
       avatar: avatar ?? avatarInitials(nickname),
+      theme: user.theme,
       tokenBalance: user.tokenBalance,
       freeChatCount: user.freeChatCount,
     };
@@ -52,6 +53,13 @@ export async function POST(req: Request) {
     const token = signSession(user.id);
     const response = NextResponse.json({ token, user: publicUser });
     attachSessionCookie(response, user.id, token);
+    console.log("[api/auth/login] 200:", {
+      userId: user.id,
+      email: user.email,
+      theme: user.theme,
+      cookieSet: true,
+      cookieName: "token_agent_session",
+    });
     return response;
   } catch (error) {
     console.error("Login API error:", error);

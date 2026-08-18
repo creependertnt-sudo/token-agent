@@ -44,6 +44,8 @@ model User {
   nickname      String?
   /** 头像标识（首字母/预设 key）；可空，前端回退昵称首字 */
   avatar        String?
+  /** 主题偏好：light | dark | system */
+  theme         String   @default("dark")
   tokenBalance  Int      @default(0)
   freeChatCount Int      @default(20)
   createdAt     DateTime @default(now())
@@ -51,8 +53,12 @@ model User {
   orders            Order[]
   conversations     Conversation[]
   memories          AgentMemory[]
+  customerMemory    CustomerMemory?
   selectedServices  UserSelectedService[]
   tokenUsages       TokenUsage[]
+  tokenTransactions TokenTransaction[]
+  salesConversions  SalesConversion[]
+  rateLimitWindows  RateLimitWindow[]
 
   @@index([createdAt])
 }
@@ -70,6 +76,58 @@ model AgentMemory {
   @@index([userId])
   @@index([userId, category])
   @@index([userId, updatedAt])
+}
+
+/**
+ * 用户级请求频率窗口（按自然分钟）。
+ * 不参与扣费与模型路由。
+ */
+model RateLimitWindow {
+  userId      String
+  windowStart Int
+  count       Int      @default(0)
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, windowStart])
+  @@index([windowStart])
+}
+
+/**
+ * 长期客户记忆（SALES 回访用）
+ * 每用户一条，结构化保存行业/需求/预算/购买/推荐/偏好
+ */
+model CustomerMemory {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  /** 行业 */
+  industry          String   @default("")
+  /** 需求摘要 */
+  needs             String   @default("")
+  /** 预算水平或描述 */
+  budget            String   @default("")
+  /** 痛点 */
+  painPoints        String   @default("")
+  /** 购买历史摘要 */
+  purchaseHistory   String   @default("")
+  /** 推荐模型 LIGHT|STANDARD|PREMIUM */
+  recommendedModel  String   @default("")
+  /** 用户偏好 */
+  preferences       String   @default("")
+  /** NEW | INTERESTED | COMPARING | READY_TO_BUY | CUSTOMER */
+  customerStage     String   @default("NEW")
+  /** low | medium | high */
+  confidence        String   @default("low")
+  /** 最近销售意图，如 MODEL_SELECT */
+  lastIntent        String   @default("")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([customerStage])
+  @@index([updatedAt])
 }
 
 model AIProvider {
@@ -119,6 +177,7 @@ model AIService {
   model         AIModel?              @relation(fields: [modelId], references: [id], onDelete: SetNull)
   selections    UserSelectedService[]
   usages        TokenUsage[]
+  transactions  TokenTransaction[]
   conversations Conversation[]
 
   @@index([type])
@@ -159,6 +218,30 @@ model TokenUsage {
   @@index([createdAt])
 }
 
+/**
+ * 付费消耗事务：先 PENDING 预扣，AI 成功再 SUCCESS，失败 FAILED 并退回额度。
+ * SALES（cost=0）不创建本记录。
+ */
+model TokenTransaction {
+  id        String   @id @default(cuid())
+  userId    String
+  serviceId String?
+  /** 预扣/消耗数量，恒为正 */
+  amount    Int
+  /** PENDING | SUCCESS | FAILED */
+  status    String
+  reason    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user    User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  service AIService? @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([status])
+  @@index([serviceId])
+}
+
 model TokenPackage {
   id          String   @id @default(cuid())
   key         String   @unique
@@ -170,7 +253,8 @@ model TokenPackage {
   active      Boolean  @default(true)
   createdAt   DateTime @default(now())
 
-  orders Order[]
+  orders           Order[]
+  salesConversions SalesConversion[]
 
   @@index([active, sortOrder])
   @@index([createdAt])
@@ -201,9 +285,10 @@ model Conversation {
   serviceId String?
   createdAt DateTime @default(now())
 
-  user     User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  service  AIService? @relation(fields: [serviceId], references: [id], onDelete: SetNull)
-  messages Message[]
+  user             User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  service          AIService?         @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+  messages         Message[]
+  salesConversions SalesConversion[]
 
   @@index([userId])
   @@index([serviceId])
@@ -314,6 +399,10 @@ model ModelConfig {
   maxContext          Int
   /** 注入该档 system prompt 的行为说明（来自 DB，禁止代码写死档位定位） */
   systemInstructions  String   @default("")
+  /** 是否开启 DeepSeek 思考模式（reasoning）；SALES/LIGHT/STANDARD 默认 false，PREMIUM true */
+  enableReasoning     Boolean  @default(false)
+  /** 短期对话记忆轮数（一轮≈用户+助手）；参与上下文的消息上限 = memoryRounds * 2 */
+  memoryRounds        Int      @default(16)
   keywords            String
   sortOrder           Int      @default(0)
   createdAt           DateTime @default(now())
@@ -321,6 +410,31 @@ model ModelConfig {
 
   @@index([grade])
   @@index([sortOrder])
+}
+
+/**
+ * SALES 转化记录：推荐了什么套餐、是否点击、是否成交。
+ * 不参与扣费与模型路由。
+ */
+model SalesConversion {
+  id             String   @id @default(cuid())
+  userId         String
+  conversationId String?
+  packageId      String
+  /** STRONG | MEDIUM | SOFT */
+  strategy       String
+  /** SHOWN | CLICKED | PAID */
+  status         String
+  createdAt      DateTime @default(now())
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  conversation Conversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  package      TokenPackage  @relation(fields: [packageId], references: [id], onDelete: Restrict)
+
+  @@index([userId, createdAt])
+  @@index([packageId])
+  @@index([status])
+  @@index([conversationId])
 }
 
 /** 销售策略（按意图 / 客户类型注入话术与执行准则） */
@@ -396,4 +510,158 @@ model ModelRecommendRule {
 
   @@index([priority])
   @@index([active])
+}
+
+/**
+ * 一次 AI 请求的观测轨迹。不参与扣费、路由、推荐。
+ */
+model AgentTrace {
+  id             String   @id @default(cuid())
+  userId         String?
+  conversationId String?
+  serviceType    String
+  intent         String?
+  model          String?
+  status         String
+  latency        Int?
+  inputTokens    Int?
+  outputTokens   Int?
+  createdAt      DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([serviceType, createdAt])
+  @@index([status])
+  @@index([userId, createdAt])
+}
+
+/** 工具调用记录。观测层额外保留 traceId / arguments / error / latency。 */
+model ToolCallLog {
+  id        String   @id @default(cuid())
+  userId    String
+  toolName  String
+  success   Boolean
+  createdAt DateTime @default(now())
+  traceId   String   @default("")
+  arguments String?
+  error     String?
+  latency   Int?
+
+  @@index([userId, createdAt])
+  @@index([traceId])
+  @@index([toolName, createdAt])
+  @@index([success])
+}
+
+model ChatAnalytics {
+  id        String   @id @default(cuid())
+  userId    String
+  intent    String
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([intent])
+}
+
+model ConversionAnalytics {
+  id        String   @id @default(cuid())
+  packageId String
+  /** SHOWN / CLICKED / PAID */
+  action    String
+  createdAt DateTime @default(now())
+
+  @@index([packageId, createdAt])
+  @@index([action])
+}
+
+/**
+ * 销售漏斗观测：展示 → 点击 → 成交。
+ * 不替代 SalesConversion，只做统计。
+ */
+model SalesFunnelLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  packageId String?
+  strategy  String?
+  shown     Boolean  @default(false)
+  clicked   Boolean  @default(false)
+  paid      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([packageId])
+  @@index([shown, clicked, paid])
+}
+
+/** Agent 错误观测：DeepSeek / Tool / DB / SSE。 */
+model AgentErrorLog {
+  id        String   @id @default(cuid())
+  type      String
+  message   String
+  traceId   String?
+  createdAt DateTime @default(now())
+
+  @@index([type, createdAt])
+  @@index([traceId])
+  @@index([createdAt])
+}
+
+model AgentLog {
+  id                   String   @id @default(cuid())
+  userId               String
+  message              String
+  intent               String?
+  toolUsed             String?
+  toolSuccess          Boolean?
+  recommendedPackageId String?
+  pushStrategy         String?
+  purchased            Boolean  @default(false)
+  createdAt            DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([intent])
+  @@index([purchased])
+}
+
+model AgentRun {
+  id                  String   @id @default(cuid())
+  userId              String
+  serviceType         String
+  modelType           String?
+  intent              String?
+  toolsUsed           String?
+  toolCount           Int      @default(0)
+  inputTokens         Int?
+  outputTokens        Int?
+  success             Boolean  @default(false)
+  errorMessage        String?
+  duration            Int?
+  toolDuration        Int?
+  llmDuration         Int?
+  memoryInjectedCount Int?
+  memoryUsedCount     Int?
+  memoryCategory      String?
+  createdAt           DateTime @default(now())
+
+  toolCalls AgentToolCall[]
+
+  @@index([userId, createdAt])
+  @@index([serviceType, createdAt])
+  @@index([success])
+}
+
+model AgentToolCall {
+  id            String   @id @default(cuid())
+  agentRunId    String
+  toolName      String
+  arguments     String?
+  resultSummary String?
+  success       Boolean
+  duration      Int?
+  createdAt     DateTime @default(now())
+
+  run AgentRun @relation(fields: [agentRunId], references: [id], onDelete: Cascade)
+
+  @@index([agentRunId])
+  @@index([toolName, createdAt])
+  @@index([success])
 }

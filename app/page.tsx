@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { motion } from "framer-motion";
 import { CustomerPanel } from "@/components/chat/CustomerPanel";
 import { MessageBubble } from "@/components/chat/MessageBubble";
 import {
@@ -13,15 +13,16 @@ import {
   ModelSwitchToast,
   type ModelSwitchNotice,
 } from "@/components/chat/ModelSwitchToast";
-import { TypingIndicator } from "@/components/chat/TypingIndicator";
 import { useAuth } from "@/hooks/useAuth";
 import { authFetch } from "@/lib/client-auth";
+import { consumeChatSse, type ChatSseDone } from "@/lib/chat-sse";
 import {
   SERVICE_CONFIG,
   SERVICE_TOKEN_COST,
   WELCOME_MESSAGE,
 } from "@/lib/constants";
 import type { AuthUser, ChatMessage, ProductSuggestion } from "@/components/chat/types";
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
 
 type ServiceType = keyof typeof SERVICE_TOKEN_COST;
 
@@ -287,92 +288,31 @@ export default function Home() {
       content: message,
       createdAt: new Date().toISOString(),
     };
+    const assistantId = crypto.randomUUID();
+    const placeholder: ChatMessage = {
+      id: assistantId,
+      role: "assistant",
+      content: "",
+      createdAt: new Date().toISOString(),
+      streaming: true,
+      thinking: true,
+      serviceType,
+      modelName: SERVICE_CONFIG[serviceType].name,
+    };
 
-    setMessages((prev) => [...prev, userMessage]);
+    setMessages((prev) => [...prev, userMessage, placeholder]);
     setInput("");
     setError(null);
     setIsLoading(true);
 
-    try {
-      const response = await authFetch("/api/chat", {
-        method: "POST",
-        body: JSON.stringify({
-          message,
-          conversationId,
-          serviceType,
-          serviceId: activeServiceId,
-        }),
-      });
+    const patchAssistant = (patch: Partial<ChatMessage>) => {
+      setMessages((prev) =>
+        prev.map((m) => (m.id === assistantId ? { ...m, ...patch } : m)),
+      );
+    };
 
-      const data: {
-        reply?: string;
-        conversationId?: string;
-        messageId?: string;
-        tokenBalance?: number;
-        freeChatCount?: number;
-        showProducts?: boolean;
-        products?: ProductSuggestion[];
-        service?: { id: string; type?: string; name?: string; tokenCost?: number };
-        messageMeta?: {
-          serviceType?: string;
-          modelName?: string;
-          tokenCost?: number;
-          tokenBalanceAfter?: number;
-        };
-        serviceType?: string;
-        lockedType?: string;
-        usedServiceType?: string;
-        selectedServiceType?: string;
-        featureCost?: number;
-        error?: string;
-        message?: string;
-        redirect?: string;
-      } = await response.json();
-
-      if (response.status === 400 && data.redirect === "/select-ai") {
-        window.location.href = "/select-ai";
-        return;
-      }
-
-      if (response.status === 402) {
-        const insufficient: ChatMessage = {
-          id: crypto.randomUUID(),
-          role: "assistant",
-          content:
-            data.message ??
-            "AI服务额度不足，请购买 Token 套餐后再使用高级功能。",
-          createdAt: new Date().toISOString(),
-        };
-        setMessages((prev) => [...prev, insufficient]);
-        setError(null);
-        try {
-          const packagesRes = await authFetch("/api/packages");
-          const packagesData: { packages?: ProductSuggestion[] } =
-            await packagesRes.json();
-          if (packagesData.packages?.length) {
-            setMessages((prev) => {
-              const last = prev[prev.length - 1];
-              if (!last) return prev;
-              return [
-                ...prev.slice(0, -1),
-                { ...last, products: packagesData.packages },
-              ];
-            });
-          }
-        } catch {
-          // ignore
-        }
-        return;
-      }
-
-      if (!response.ok) {
-        throw new Error(data.error ?? "请求失败，请稍后重试。");
-      }
-
-      const reply = data.reply ?? "";
+    const applyDone = (data: ChatSseDone) => {
       const meta = data.messageMeta;
-
-      // 发送时已锁定的用户选择：永远优先于接口返回 / 默认模型 / 其他判断
       const lockedType = serviceType;
       const lockedCfg = SERVICE_CONFIG[lockedType];
       const apiType =
@@ -397,9 +337,6 @@ export default function Home() {
         );
       }
 
-      // 展示快照：档位/名称/扣费锁定发送时选择；余额来自本条 messageMeta
-      const snapServiceType = lockedType;
-      const snapModelName = lockedCfg.name;
       const snapTokenCost =
         apiType === lockedType && typeof apiCost === "number"
           ? apiCost
@@ -411,23 +348,25 @@ export default function Home() {
             ? data.tokenBalance
             : null;
 
-      const assistantMessage: ChatMessage = {
-        id: data.messageId ?? crypto.randomUUID(),
-        role: "assistant",
-        content: reply,
-        createdAt: new Date().toISOString(),
-        products: data.showProducts ? data.products : undefined,
-        serviceType: snapServiceType,
-        modelName: snapModelName,
+      patchAssistant({
+        content: data.reply ?? "",
+        streaming: false,
+        thinking: false,
+        products: data.showProducts
+          ? (data.products ?? []).map((p) => ({
+              ...p,
+              conversionId: data.conversionId,
+            }))
+          : undefined,
+        serviceType: lockedType,
+        modelName: lockedCfg.name,
         tokenCost: snapTokenCost,
         tokenBalanceAfter: snapBalance,
-      };
+      });
 
-      setMessages((prev) => [...prev, assistantMessage]);
       const nextConvId = data.conversationId ?? conversationId;
       setConversationId(nextConvId);
       if (nextConvId) writeStoredConversationId(nextConvId);
-      // 顶部选择始终保持用户已选，不被响应覆盖
       writeStoredServiceType(lockedType);
       if (data.service?.id && data.service.type === lockedType) {
         setActiveServiceId(data.service.id);
@@ -443,9 +382,119 @@ export default function Home() {
       if (Object.keys(nextPatch).length > 0) {
         patchUser(nextPatch);
       }
+    };
+
+    try {
+      const response = await authFetch("/api/chat", {
+        method: "POST",
+        headers: { Accept: "text/event-stream" },
+        body: JSON.stringify({
+          message,
+          conversationId,
+          serviceType,
+          serviceId: activeServiceId,
+        }),
+      });
+
+      const contentType = response.headers.get("content-type") ?? "";
+
+      if (response.status === 400) {
+        const data: { redirect?: string; error?: string } = await response.json();
+        if (data.redirect === "/select-ai") {
+          window.location.href = "/select-ai";
+          return;
+        }
+        throw new Error(data.error ?? "请求失败，请稍后重试。");
+      }
+
+      if (response.status === 402) {
+        const data: {
+          message?: string;
+          showProducts?: boolean;
+          products?: ProductSuggestion[];
+        } = await response.json();
+        const recommended =
+          data.showProducts && data.products && data.products.length > 0
+            ? data.products
+            : null;
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantId
+              ? {
+                  id: assistantId,
+                  role: "assistant",
+                  content:
+                    data.message ??
+                    "AI服务额度不足，请购买 Token 套餐后再使用高级功能。",
+                  createdAt: new Date().toISOString(),
+                  streaming: false,
+                  thinking: false,
+                  products: recommended ?? undefined,
+                }
+              : m,
+          ),
+        );
+        setError(null);
+        if (recommended) return;
+        try {
+          const packagesRes = await authFetch("/api/packages");
+          const packagesData: { packages?: ProductSuggestion[] } =
+            await packagesRes.json();
+          if (packagesData.packages?.length) {
+            patchAssistant({ products: packagesData.packages });
+          }
+        } catch {
+          // ignore
+        }
+        return;
+      }
+
+      if (!response.ok) {
+        const data: { error?: string; message?: string } = await response.json();
+        throw new Error(
+          data.error === "RATE_LIMITED"
+            ? (data.message ?? "请求过于频繁，请稍后再试。")
+            : (data.error ?? data.message ?? "请求失败，请稍后重试。"),
+        );
+      }
+
+      if (contentType.includes("text/event-stream")) {
+        let streamError: string | null = null;
+        await consumeChatSse(response, {
+          onThinking: () => patchAssistant({ thinking: true }),
+          onDelta: (text) => {
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === assistantId
+                  ? {
+                      ...m,
+                      thinking: false,
+                      streaming: true,
+                      content: `${m.content}${text}`,
+                    }
+                  : m,
+              ),
+            );
+          },
+          onDone: applyDone,
+          onError: (msg) => {
+            streamError = msg;
+          },
+        });
+        if (streamError) throw new Error(streamError);
+        return;
+      }
+
+      const data = (await response.json()) as ChatSseDone & {
+        error?: string;
+        message?: string;
+      };
+      applyDone(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "未知错误");
-      setMessages((prev) => prev.slice(0, -1));
+      setMessages((prev) =>
+        prev.filter((m) => m.id !== userMessage.id && m.id !== assistantId),
+      );
     } finally {
       setIsLoading(false);
     }
@@ -456,8 +505,22 @@ export default function Home() {
     await sendMessage(input);
   }
 
-  function handleBuy(_product: ProductSuggestion) {
-    window.location.href = "/recharge";
+  async function handleBuy(product: ProductSuggestion) {
+    try {
+      await authFetch("/api/sales/conversions/click", {
+        method: "POST",
+        body: JSON.stringify({
+          packageId: product.id,
+          conversionId: product.conversionId ?? undefined,
+        }),
+      });
+    } catch {
+      // 点击记录失败不阻断购买
+    }
+    const q = product.id
+      ? `?package=${encodeURIComponent(product.id)}`
+      : "";
+    window.location.href = `/recharge${q}`;
   }
 
   const activeService = services.find((s) => s.id === activeServiceId);
@@ -512,6 +575,10 @@ export default function Home() {
               </div>
             </div>
             <div className="flex shrink-0 items-center gap-2">
+              <ThemeToggle
+                userTheme={user.theme}
+                onThemeSaved={(theme) => patchUser({ theme })}
+              />
               <Link
                 href="/select-ai"
                 className="hidden rounded-xl border border-panel-border px-3 py-2 text-xs text-muted transition hover:text-foreground sm:inline-flex"
@@ -551,7 +618,7 @@ export default function Home() {
 
           <div
             ref={listRef}
-            className="h-full overflow-y-auto overscroll-contain pt-5 pb-4 md:pt-6"
+            className="h-full overflow-y-auto overscroll-contain bg-chat pt-5 pb-4 md:pt-6"
           >
             <div className="chat-thread flex flex-col gap-4 pb-2">
               {messages.map((msg) => (
@@ -564,19 +631,6 @@ export default function Home() {
                   userAvatar={user.avatar}
                 />
               ))}
-
-              <AnimatePresence>
-                {isLoading && (
-                  <TypingIndicator
-                    serviceType={activeServiceType}
-                    modelName={
-                      activeServiceType
-                        ? SERVICE_CONFIG[activeServiceType].name
-                        : activeService?.name
-                    }
-                  />
-                )}
-              </AnimatePresence>
             </div>
           </div>
         </div>
@@ -599,7 +653,7 @@ export default function Home() {
                   : `向 ${activeServiceType ?? "AI"}（${activeService?.name ?? ""}）提问...`
               }
               disabled={isLoading}
-              className="flex-1 rounded-2xl border border-panel-border bg-[#0a111b] px-4 py-3 text-sm text-foreground outline-none transition placeholder:text-muted/70 focus:border-accent/50 disabled:opacity-50"
+              className="flex-1 rounded-2xl border border-panel-border bg-card px-4 py-3 text-sm text-foreground outline-none transition placeholder:text-muted/70 focus:border-accent/50 disabled:opacity-50"
             />
             <motion.button
               type="submit"

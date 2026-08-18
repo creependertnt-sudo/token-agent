@@ -1,19 +1,95 @@
 @import "tailwindcss";
 
-:root {
+/* 默认 = 深色（与历史 UI 一致）；next-themes 会在 html 上挂 .dark / .light */
+:root,
+.dark {
   --background: #070b12;
   --foreground: #e8eef8;
   --panel: #0d1420;
+  --chat: #070b12;
+  --card: #0a111b;
+  --sidebar: #0d1420;
   --panel-border: #1c2738;
   --accent: #2dd4bf;
   --accent-soft: rgba(45, 212, 191, 0.12);
   --muted: #8b9bb4;
+  --scrollbar: #2a3a52;
+  --md-heading: #f3f7ff;
+  --md-strong: #f8fbff;
+  --md-em: #d7e2f3;
+  --md-th: #eaf7f4;
+  --md-td: #d5e0f0;
+  --md-row-alt: rgba(255, 255, 255, 0.02);
+  --bubble-ai-bg: rgba(17, 24, 39, 0.88);
+  --bubble-ai-border: color-mix(in srgb, var(--panel-border) 80%, transparent);
+  --bubble-ai-shadow: 0 6px 18px rgba(0, 0, 0, 0.14);
+  --bubble-user-bg: #2a3a55;
+  --bubble-user-fg: #e8eef8;
+  --bubble-user-border: transparent;
+  --bubble-radius: 12px;
+  --toast-bg: rgba(13, 21, 32, 0.95);
+  --toast-text: #e8eef8;
+  --toast-border: color-mix(in srgb, var(--accent) 25%, transparent);
+  --toast-muted: #8b9bb4;
+  --toast-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+  --code-fade-bg: rgba(13, 20, 32, 0.92);
+  --code-inline-bg: rgba(0, 0, 0, 0.35);
+  --code-inline-fg: #b8f5e8;
+  --code-block-bg: #080e17;
+  --code-block-fg: #d7e8ff;
+  --code-toolbar-bg: rgba(12, 18, 28, 0.95);
+  --blockquote-fg: #c9d6ea;
+}
+
+.light {
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  --panel: #ffffff;
+  --chat: #ffffff;
+  /* 侧栏卡片抬升：白底 + 淡天蓝底 */
+  --card: #ffffff;
+  --sidebar: #eaf6ff;
+  --panel-border: #d0e4f0;
+  --accent: #0d9488;
+  --accent-soft: rgba(13, 148, 136, 0.12);
+  --muted: #64748b;
+  --scrollbar: #cbd5e1;
+  --md-heading: #0f172a;
+  --md-strong: #0f172a;
+  --md-em: #334155;
+  --md-th: #0f172a;
+  --md-td: #334155;
+  --md-row-alt: rgba(15, 23, 42, 0.03);
+  /* AI：浅蓝白 */
+  --bubble-ai-bg: #f5faff;
+  --bubble-ai-border: #d4e9f6;
+  --bubble-ai-shadow: 0 2px 10px rgba(14, 165, 233, 0.07);
+  /* 用户：QQ 淡天蓝 */
+  --bubble-user-bg: #d6eeff;
+  --bubble-user-fg: #111827;
+  --bubble-user-border: #b9dff5;
+  --bubble-radius: 14px;
+  --toast-bg: #ffffff;
+  --toast-text: #111827;
+  --toast-border: #e5e7eb;
+  --toast-muted: #64748b;
+  --toast-shadow: 0 4px 16px rgba(15, 23, 42, 0.08);
+  --code-fade-bg: rgba(248, 250, 252, 0.95);
+  --code-inline-bg: rgba(15, 23, 42, 0.06);
+  --code-inline-fg: #0f766e;
+  --code-block-bg: #f1f5f9;
+  --code-block-fg: #0f172a;
+  --code-toolbar-bg: rgba(241, 245, 249, 0.95);
+  --blockquote-fg: #334155;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-panel: var(--panel);
+  --color-chat: var(--chat);
+  --color-card: var(--card);
+  --color-sidebar: var(--sidebar);
   --color-panel-border: var(--panel-border);
   --color-accent: var(--accent);
   --color-accent-soft: var(--accent-soft);
@@ -31,7 +107,7 @@ body {
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: #2a3a52 transparent;
+  scrollbar-color: var(--scrollbar) transparent;
 }
 
 /* AI Markdown 气泡样式 */
@@ -60,7 +136,7 @@ body {
   margin: 0.85rem 0 0.45rem;
   font-weight: 600;
   line-height: 1.35;
-  color: #f3f7ff;
+  color: var(--md-heading);
 }
 
 .markdown-body h1 {
@@ -78,12 +154,12 @@ body {
 
 .markdown-body strong {
   font-weight: 650;
-  color: #f8fbff;
+  color: var(--md-strong);
 }
 
 .markdown-body em {
   font-style: italic;
-  color: #d7e2f3;
+  color: var(--md-em);
 }
 
 .markdown-body a {
@@ -121,8 +197,8 @@ body {
   padding: 0.45rem 0.8rem;
   border-left: 3px solid var(--accent);
   border-radius: 0 0.75rem 0.75rem 0;
-  background: rgba(45, 212, 191, 0.08);
-  color: #c9d6ea;
+  background: var(--accent-soft);
+  color: var(--blockquote-fg);
 }
 
 .markdown-body hr {
@@ -136,8 +212,8 @@ body {
   font-size: 0.84em;
   padding: 0.12rem 0.35rem;
   border-radius: 0.4rem;
-  background: rgba(0, 0, 0, 0.35);
-  color: #b8f5e8;
+  background: var(--code-inline-bg);
+  color: var(--code-inline-fg);
 }
 
 .markdown-body pre {
@@ -146,13 +222,13 @@ body {
   overflow-x: auto;
   border-radius: 0.9rem;
   border: 1px solid var(--panel-border);
-  background: #080e17;
+  background: var(--code-block-bg);
 }
 
 .markdown-body pre code {
   padding: 0;
   background: transparent;
-  color: #d7e8ff;
+  color: var(--code-block-fg);
   font-size: 0.8rem;
   line-height: 1.55;
   white-space: pre;
@@ -164,7 +240,7 @@ body {
   margin: 0.75rem 0;
   border-radius: 0.9rem;
   border: 1px solid var(--panel-border);
-  background: #080e17;
+  background: var(--code-block-bg);
   overflow: hidden;
 }
 
@@ -175,7 +251,7 @@ body {
   gap: 8px;
   padding: 0.4rem 0.65rem;
   border-bottom: 1px solid color-mix(in srgb, var(--panel-border) 85%, transparent);
-  background: rgba(12, 18, 28, 0.95);
+  background: var(--code-toolbar-bg);
 }
 
 .md-code-lang {
@@ -232,7 +308,7 @@ body {
   transform: translateX(-50%);
   border: 1px solid var(--panel-border);
   border-radius: 999px;
-  background: rgba(13, 20, 32, 0.92);
+  background: var(--code-fade-bg);
   padding: 0.25rem 0.75rem;
   font-size: 0.6875rem;
   color: var(--accent);
@@ -250,7 +326,7 @@ body {
   overflow-x: auto;
   border-radius: 0.75rem;
   border: 1px solid var(--panel-border);
-  background: #0a111b;
+  background: var(--card);
 }
 
 .markdown-body .md-table-scroll table {
@@ -287,11 +363,11 @@ body {
   border: 1px solid var(--panel-border);
   border-radius: 0.75rem;
   overflow: hidden;
-  background: #0a111b;
+  background: var(--card);
 }
 
 .markdown-body thead {
-  background: rgba(45, 212, 191, 0.1);
+  background: var(--accent-soft);
 }
 
 .markdown-body th,
@@ -305,17 +381,17 @@ body {
 
 .markdown-body th {
   font-weight: 600;
-  color: #eaf7f4;
+  color: var(--md-th);
   font-size: 0.8rem;
 }
 
 .markdown-body td {
-  color: #d5e0f0;
+  color: var(--md-td);
   font-size: 0.8rem;
 }
 
 .markdown-body tr:nth-child(even) td {
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--md-row-alt);
 }
 
 /* ========== Discord / ChatGPT 宽聊天气泡布局 ========== */
@@ -458,7 +534,7 @@ body {
   max-width: 100%;
   border-radius: 0.4rem;
   border: 1px solid color-mix(in srgb, var(--panel-border) 90%, transparent);
-  background: rgba(10, 17, 27, 0.75);
+  background: color-mix(in srgb, var(--card) 75%, transparent);
   padding: 0.1rem 0.4rem;
   font-size: 0.625rem;
   font-weight: 600;
@@ -495,7 +571,7 @@ body {
 }
 
 .bubble {
-  border-radius: 12px;
+  border-radius: var(--bubble-radius, 12px);
   padding: 10px 14px;
   max-width: 100%;
   width: fit-content;
@@ -505,19 +581,46 @@ body {
 }
 
 .bubble-ai {
-  border: 1px solid color-mix(in srgb, var(--panel-border) 80%, transparent);
-  background: rgba(17, 24, 39, 0.88);
+  border: 1px solid var(--bubble-ai-border);
+  background: var(--bubble-ai-bg);
   color: var(--foreground);
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.14);
+  box-shadow: var(--bubble-ai-shadow);
+  border-radius: var(--bubble-radius, 12px);
   border-top-left-radius: 4px;
   /* AI 气泡可用较宽区域，由 .assistant-content max-width: 90% 约束 */
   max-width: 100%;
 }
 
+.stream-thinking {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.stream-caret {
+  display: inline-block;
+  width: 2px;
+  height: 0.9em;
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  background: var(--accent);
+  animation: stream-caret-blink 1s step-end infinite;
+}
+
+@keyframes stream-caret-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
 .bubble-user {
   display: inline-block;
-  background: #2a3a55;
-  color: var(--foreground);
+  background: var(--bubble-user-bg);
+  color: var(--bubble-user-fg);
+  border: 1px solid var(--bubble-user-border);
+  border-radius: var(--bubble-radius, 12px);
   border-top-right-radius: 4px;
   text-align: left;
   width: fit-content;

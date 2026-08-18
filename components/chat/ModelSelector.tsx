@@ -78,7 +78,7 @@ export function ModelSelector({
               className={`min-w-[5.5rem] rounded-xl border px-3 py-2 text-left transition disabled:opacity-50 ${
                 active
                   ? "border-accent/50 bg-accent/15 text-accent shadow-[0_0_0_1px_rgba(45,212,191,0.12)]"
-                  : "border-panel-border bg-[#0a111b] text-muted hover:border-accent/30 hover:text-foreground"
+                  : "border-panel-border bg-card text-muted hover:border-accent/30 hover:text-foreground"
               }`}
             >
               <span className="block text-xs font-semibold leading-tight">

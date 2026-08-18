@@ -6,6 +6,14 @@ export type MemoryItem = {
   id: string;
   category: MemoryCategory;
   content: string;
+  updatedAt?: Date;
+};
+
+const CATEGORY_WEIGHT: Record<MemoryCategory, number> = {
+  business: 4,
+  preference: 3,
+  product: 2,
+  fact: 1,
 };
 
 const CATEGORY_LABEL: Record<MemoryCategory, string> = {
@@ -15,6 +23,9 @@ const CATEGORY_LABEL: Record<MemoryCategory, string> = {
   fact: "历史重要事实",
 };
 
+const LOW_VALUE_RE =
+  /^(你好|您好|哈喽|谢谢|感谢|嗯+|好的|ok|okay|是的|不是|再见).{0,8}$/i;
+
 export async function getUserMemories(userId: string): Promise<MemoryItem[]> {
   return prisma.agentMemory.findMany({
     where: { userId },
@@ -23,8 +34,144 @@ export async function getUserMemories(userId: string): Promise<MemoryItem[]> {
       id: true,
       category: true,
       content: true,
+      updatedAt: true,
     },
   });
+}
+
+/** Prompt 只注入重要 Memory，不把全部历史塞进上下文。 */
+export function selectImportantMemories(
+  memories: MemoryItem[],
+  limit: number,
+): MemoryItem[] {
+  if (memories.length <= limit) return memories;
+  const ranked = [...memories].sort((a, b) => {
+    const w = CATEGORY_WEIGHT[b.category] - CATEGORY_WEIGHT[a.category];
+    if (w !== 0) return w;
+    const ta = a.updatedAt?.getTime() ?? 0;
+    const tb = b.updatedAt?.getTime() ?? 0;
+    if (tb !== ta) return tb - ta;
+    return b.content.length - a.content.length;
+  });
+  return ranked.slice(0, limit);
+}
+
+function normalizeMemoryText(content: string): string {
+  return content.replace(/\s+/g, " ").trim().toLowerCase();
+}
+
+function isLowValueMemory(content: string): boolean {
+  const t = content.trim();
+  if (t.length < 6) return true;
+  return LOW_VALUE_RE.test(t);
+}
+
+/**
+ * 超过配额时：删低价值 → 合并重复 → 同类摘要，直到 <= max。
+ * 不调用 LLM，不扣 Token。
+ */
+export async function enforceMemoryQuota(
+  userId: string,
+  maxMemories: number,
+): Promise<number> {
+  const cap = Math.max(1, Math.floor(maxMemories));
+  let rows = await prisma.agentMemory.findMany({
+    where: { userId },
+    orderBy: { updatedAt: "asc" },
+  });
+  if (rows.length <= cap) return rows.length;
+
+  const lowIds = rows.filter((r) => isLowValueMemory(r.content)).map((r) => r.id);
+  if (lowIds.length > 0) {
+    await prisma.agentMemory.deleteMany({
+      where: { userId, id: { in: lowIds } },
+    });
+    rows = rows.filter((r) => !lowIds.includes(r.id));
+  }
+  if (rows.length <= cap) return rows.length;
+
+  const keep = new Map<string, (typeof rows)[number]>();
+  const dupIds: string[] = [];
+  for (const row of [...rows].reverse()) {
+    const key = `${row.category}:${normalizeMemoryText(row.content)}`;
+    const existing = keep.get(key);
+    if (existing) {
+      if (row.content.length > existing.content.length) {
+        dupIds.push(existing.id);
+        keep.set(key, row);
+      } else {
+        dupIds.push(row.id);
+      }
+      continue;
+    }
+    const contained = [...keep.values()].find(
+      (o) =>
+        o.category === row.category &&
+        (o.content.includes(row.content) || row.content.includes(o.content)),
+    );
+    if (contained) {
+      if (row.content.length > contained.content.length) {
+        dupIds.push(contained.id);
+        keep.delete(`${contained.category}:${normalizeMemoryText(contained.content)}`);
+        keep.set(key, row);
+      } else {
+        dupIds.push(row.id);
+      }
+      continue;
+    }
+    keep.set(key, row);
+  }
+  if (dupIds.length > 0) {
+    await prisma.agentMemory.deleteMany({
+      where: { userId, id: { in: dupIds } },
+    });
+    const drop = new Set(dupIds);
+    rows = rows.filter((r) => !drop.has(r.id));
+  }
+  if (rows.length <= cap) return rows.length;
+
+  const overflow = rows.length - cap;
+  const oldest = rows.slice(0, overflow + 4);
+  const byCat = new Map<MemoryCategory, typeof oldest>();
+  for (const row of oldest) {
+    const list = byCat.get(row.category) ?? [];
+    list.push(row);
+    byCat.set(row.category, list);
+  }
+
+  for (const list of byCat.values()) {
+    if (rows.length <= cap) break;
+    if (list.length < 2) continue;
+    const summary = list
+      .map((r) => r.content.trim())
+      .join("；")
+      .slice(0, 400);
+    const keepOne = list[list.length - 1]!;
+    const removeIds = list.slice(0, -1).map((r) => r.id);
+    await prisma.agentMemory.update({
+      where: { id: keepOne.id },
+      data: { content: `摘要：${summary}` },
+    });
+    await prisma.agentMemory.deleteMany({
+      where: { userId, id: { in: removeIds } },
+    });
+    const drop = new Set(removeIds);
+    rows = rows
+      .filter((r) => !drop.has(r.id))
+      .map((r) =>
+        r.id === keepOne.id ? { ...r, content: `摘要：${summary}` } : r,
+      );
+  }
+
+  if (rows.length > cap) {
+    const extra = rows.slice(0, rows.length - cap).map((r) => r.id);
+    await prisma.agentMemory.deleteMany({
+      where: { userId, id: { in: extra } },
+    });
+    rows = rows.slice(rows.length - cap);
+  }
+
+  return rows.length;
 }
 
 export type CatalogPromptData = {
@@ -148,7 +295,8 @@ ${existingText}`,
         },
       ],
       temperature: 0,
-    });
+      thinking: { type: "disabled" },
+    } as Parameters<typeof client.chat.completions.create>[0]);
 
     const raw = completion.choices[0]?.message?.content?.trim() ?? "[]";
     const jsonMatch = raw.match(/\[[\s\S]*\]/);

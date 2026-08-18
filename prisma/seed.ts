@@ -385,6 +385,8 @@ async function main() {
       maxContext: 4096,
       systemInstructions:
         "以短答、低延迟风格回复。复杂或架构类问题只给极简要点，并建议用户切换 STANDARD 或 PREMIUM。全文宜短，禁止长篇架构文。",
+      enableReasoning: false,
+      memoryRounds: 6,
       keywords: "LIGHT,A,A模型,轻量,快速,低成本,翻译,文案,学生",
       sortOrder: 1,
     },
@@ -402,6 +404,8 @@ async function main() {
       maxContext: 16384,
       systemInstructions:
         "提供结构化、可执行的中等深度回答。不要写成 PREMIUM 级超长总方案；保持 B 档边界。",
+      enableReasoning: false,
+      memoryRounds: 12,
       keywords: "STANDARD,B,B模型,生产力,开发,数据库,项目,中等推理",
       sortOrder: 2,
     },
@@ -419,6 +423,8 @@ async function main() {
       maxContext: 65536,
       systemInstructions:
         "允许完整详细方案、多方案对比与风险点。你不是 STANDARD 或 LIGHT；发挥 C 档深度推理。",
+      enableReasoning: true,
+      memoryRounds: 16,
       keywords: "PREMIUM,C,C模型,高级推理,架构,企业,算法,复杂",
       sortOrder: 3,
     },
@@ -787,6 +793,7 @@ async function main() {
     customerProfile: await prisma.customerProfile.count(),
     salesStrategy: await prisma.salesStrategy.count(),
     modelRecommendRule: await prisma.modelRecommendRule.count(),
+    customerMemory: await prisma.customerMemory.count(),
   };
   console.log("Seed completed:", counts);
 

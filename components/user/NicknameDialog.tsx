@@ -84,7 +84,7 @@ export function NicknameDialog({
                 value={value}
                 maxLength={24}
                 onChange={(e) => setValue(e.target.value)}
-                className="w-full rounded-xl border border-panel-border bg-[#0a111b] px-3 py-2.5 text-sm text-foreground outline-none focus:border-accent/50"
+                className="w-full rounded-xl border border-panel-border bg-card px-3 py-2.5 text-sm text-foreground outline-none focus:border-accent/50"
                 placeholder="输入新昵称"
               />
               {error && (

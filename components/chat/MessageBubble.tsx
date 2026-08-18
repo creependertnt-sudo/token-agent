@@ -98,7 +98,10 @@ export function MessageBubble({
         : null;
 
   const showCost =
-    message.id !== "welcome" && typeof snap.tokenCost === "number";
+    message.id !== "welcome" &&
+    !message.streaming &&
+    !message.thinking &&
+    typeof snap.tokenCost === "number";
 
   if (isUser) {
     return (
@@ -120,7 +123,7 @@ export function MessageBubble({
             </>
           }
         >
-          <div className="bubble bubble-user w-fit max-w-full">
+          <div className="bubble bubble-user w-fit max-w-full rounded-[var(--bubble-radius)]">
             <p>{message.content}</p>
           </div>
         </MessageItem>
@@ -163,23 +166,50 @@ export function MessageBubble({
           </div>
         }
       >
-        <div className="bubble bubble-ai">
-          <div className="markdown-body">
-            <ReactMarkdown
-              remarkPlugins={[remarkGfm]}
-              components={{
-                pre: ({ children }) => <>{children}</>,
-                code: MarkdownCode,
-                table: ({ children }) => (
-                  <div className="md-table-scroll">
-                    <table>{children}</table>
-                  </div>
-                ),
-              }}
-            >
-              {body}
-            </ReactMarkdown>
-          </div>
+        <div className="bubble bubble-ai rounded-[var(--bubble-radius)]">
+          {message.thinking && !body.trim() ? (
+            <div className="stream-thinking">
+              <div className="flex items-center gap-1.5">
+                {[0, 1, 2].map((i) => (
+                  <motion.span
+                    key={i}
+                    className="h-2 w-2 rounded-full bg-accent"
+                    animate={{
+                      opacity: [0.25, 1, 0.25],
+                      y: [0, -3, 0],
+                    }}
+                    transition={{
+                      duration: 0.85,
+                      repeat: Infinity,
+                      delay: i * 0.16,
+                      ease: "easeInOut",
+                    }}
+                  />
+                ))}
+              </div>
+              <span>AI正在思考...</span>
+            </div>
+          ) : (
+            <div className="markdown-body">
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={{
+                  pre: ({ children }) => <>{children}</>,
+                  code: MarkdownCode,
+                  table: ({ children }) => (
+                    <div className="md-table-scroll">
+                      <table>{children}</table>
+                    </div>
+                  ),
+                }}
+              >
+                {body || " "}
+              </ReactMarkdown>
+              {message.streaming ? (
+                <span className="stream-caret" aria-hidden />
+              ) : null}
+            </div>
+          )}
         </div>
 
         {showCost ? (
@@ -191,7 +221,9 @@ export function MessageBubble({
           />
         ) : null}
 
-        {message.products && message.products.length > 0 ? (
+        {message.products &&
+        message.products.length > 0 &&
+        !message.streaming ? (
           <div className="mt-2 grid w-full min-w-[min(100%,16rem)] max-w-full gap-2 sm:grid-cols-2">
             {message.products.map((product) => (
               <ProductCard

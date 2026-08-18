@@ -42,7 +42,7 @@ export function ModelSwitchToast({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -6, scale: 0.98 }}
             transition={{ duration: 0.22, ease: "easeOut" }}
-            className="pointer-events-auto inline-flex max-w-[min(100%,22rem)] items-start gap-2.5 rounded-2xl border border-accent/25 bg-[#0d1520]/95 px-3.5 py-2.5 shadow-[0_12px_40px_rgba(0,0,0,0.45)] backdrop-blur-md"
+            className="pointer-events-auto inline-flex max-w-[min(100%,22rem)] items-start gap-2.5 rounded-2xl border border-[var(--toast-border)] bg-[var(--toast-bg)] px-3.5 py-2.5 shadow-[var(--toast-shadow)] backdrop-blur-md"
           >
             <span
               className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent/15 text-sm text-accent"
@@ -51,10 +51,10 @@ export function ModelSwitchToast({
               ⚡
             </span>
             <div className="min-w-0 pt-0.5">
-              <p className="text-sm font-semibold leading-tight text-foreground">
+              <p className="text-sm font-semibold leading-tight text-[var(--toast-text)]">
                 已切换 {notice.type}
               </p>
-              <p className="mt-0.5 text-[11px] leading-snug text-muted">
+              <p className="mt-0.5 text-[11px] leading-snug text-[var(--toast-muted)]">
                 {notice.name}
                 {" · "}
                 {notice.tokenCost > 0
@@ -65,7 +65,7 @@ export function ModelSwitchToast({
             <button
               type="button"
               onClick={onDismiss}
-              className="ml-1 shrink-0 rounded-lg px-1.5 py-0.5 text-[11px] text-muted transition hover:bg-white/5 hover:text-foreground"
+              className="ml-1 shrink-0 rounded-lg px-1.5 py-0.5 text-[11px] text-[var(--toast-muted)] transition hover:bg-black/5 hover:text-[var(--toast-text)]"
               aria-label="关闭通知"
             >
               ✕

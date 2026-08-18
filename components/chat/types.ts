@@ -5,6 +5,7 @@ export type ProductSuggestion = {
   name: string;
   tokenAmount: number;
   price: number;
+  conversionId?: string | null;
 };
 
 export type ChatServiceTypeLabel =
@@ -32,6 +33,10 @@ export type ChatMessage = {
   tokenCost?: number | null;
   /** 本条扣费后余额（可选；新消息可从接口写入） */
   tokenBalanceAfter?: number | null;
+  /** 正在接收 SSE 流 */
+  streaming?: boolean;
+  /** 尚未出现首个正文 token */
+  thinking?: boolean;
 };
 
 export type AuthUser = {
@@ -39,6 +44,8 @@ export type AuthUser = {
   email: string;
   nickname?: string | null;
   avatar?: string | null;
+  /** light | dark | system */
+  theme?: string | null;
   tokenBalance: number;
   freeChatCount: number;
 };

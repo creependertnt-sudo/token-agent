@@ -130,23 +130,37 @@ async function resolveSessionToken(): Promise<string | null> {
 
 export async function getCurrentUser() {
   const session = await resolveSessionToken();
-  if (!session) return null;
+  if (!session) {
+    console.log("[auth] getCurrentUser: no session (cookie/Authorization missing)");
+    return null;
+  }
 
   const userId = parseSession(session);
-  if (!userId) return null;
+  if (!userId) {
+    console.log("[auth] getCurrentUser: session token invalid or expired");
+    return null;
+  }
 
-  return prisma.user.findUnique({
-    where: { id: userId },
-    select: {
-      id: true,
-      email: true,
-      nickname: true,
-      avatar: true,
-      tokenBalance: true,
-      freeChatCount: true,
-      createdAt: true,
-    },
-  });
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        nickname: true,
+        avatar: true,
+        theme: true,
+        tokenBalance: true,
+        freeChatCount: true,
+        createdAt: true,
+      },
+    });
+    console.log("[auth] getCurrentUser:", user ? { id: user.id, email: user.email, theme: user.theme } : null);
+    return user;
+  } catch (error) {
+    console.error("[auth] getCurrentUser Prisma error:", error);
+    throw error;
+  }
 }
 
 export async function requireCurrentUser() {

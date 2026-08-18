@@ -1,4 +1,6 @@
 import { SERVICE_CONFIG } from "@/lib/constants";
+import type { CustomerDemandSignals } from "@/lib/customer-analysis";
+import type { UsageEstimate } from "@/lib/usage-estimator";
 
 /** SALES 销售意图 */
 export const SALES_INTENTS = [
@@ -67,6 +69,17 @@ const CUSTOMER_LABEL: Record<CustomerType, string> = {
   UNKNOWN: "未明确（需问诊）",
 };
 
+const COMPETITOR_ENTITY_RE =
+  /openai|chatgpt|gpt-4o|gpt-4|\bgpt\b|claude|gemini|deepseek|coze|dify|fastgpt|chatbase|扣子/;
+const COMPARE_CUE_RE =
+  /相比|对比|区别|差异|哪个好|便宜|贵不贵|贵|成本|价格差|价格对比|差多少|优势|(?:^|[^如])比/;
+
+/** 点名竞品 + 比较/贵便宜 → 竞品对比（优先于普通问价） */
+export function isCompetitorCompareQuestion(message: string): boolean {
+  const t = message.trim().toLowerCase();
+  return COMPETITOR_ENTITY_RE.test(t) && COMPARE_CUE_RE.test(t);
+}
+
 /**
  * 销售意图识别（规则分类，供 RAG 加权与决策）。
  */
@@ -74,7 +87,7 @@ export function detectSalesIntent(message: string): SalesIntent {
   const t = message.trim().toLowerCase();
 
   if (
-    /企业|公司|团队采购|批量|代理商|私有化|部署|合规|采购|招投标|to\s*b|b2b/.test(
+    /企业|公司|团队采购|批量|代理商|私有化|部署|合规|采购|招投标|to\s*b|b2b|多人|员工|部门|商业使用|企业账号|\d+\s*个人/.test(
       t,
     )
   ) {
@@ -83,6 +96,10 @@ export function detectSalesIntent(message: string): SalesIntent {
   if (
     /coze|扣子|dify|fastgpt|chatbase|竞品|和其他|别的\s*ai|市面/.test(t)
   ) {
+    return "PRODUCT_COMPARE";
+  }
+  // 点名外部竞品 + 比/便宜/区别：不要被「便宜」带进 PRICE_QUERY
+  if (isCompetitorCompareQuestion(t)) {
     return "PRODUCT_COMPARE";
   }
   // A/B/C 内部对比优先走选型（差异从 ModelConfig 读）
@@ -94,7 +111,9 @@ export function detectSalesIntent(message: string): SalesIntent {
     return "MODEL_SELECT";
   }
   if (
-    /套餐|价格|多少钱|充值|购买|费用|计费|便宜|贵不贵|token\s*多少/.test(t)
+    /套餐|价格|多少钱|充值|购买|想买|买token|费用|计费|便宜|贵不贵|token\s*多少/.test(
+      t,
+    )
   ) {
     return "PRICE_QUERY";
   }
@@ -127,7 +146,12 @@ function inferSignals(message: string) {
   const budgetHigh = /不差钱|企业预算|高端|顶级|高级方案|愿意付费/.test(t)
     ? true
     : null;
-  const enterprise = /企业|公司|团队|私有化|合规|采购/.test(t) ? true : null;
+  const enterprise =
+    /企业|公司|团队|私有化|合规|采购|多人|员工|部门|商业使用|企业账号|批量|\d+\s*个人/.test(
+      t,
+    )
+      ? true
+      : null;
   const lightUse = /偶尔|轻度|简单|翻译|文案|作业|学生/.test(t) ? true : null;
   const heavyArch =
     /大型|架构|复杂算法|企业级|微服务|分布式|高并发/.test(t) ? true : null;
@@ -234,8 +258,8 @@ function knowledgeCategoriesFor(intent: SalesIntent): string[] {
 export function competitorTalkTrack(mentioned?: string | null): string {
   const name = mentioned?.trim();
   return name
-    ? `谈到 ${name}：请严格使用下方 CompetitorKnowledge 条目，禁止贬低竞品。`
-    : "竞品对比请严格使用下方 CompetitorKnowledge / SalesStrategy，禁止贬低 Coze/Dify/FastGPT/Chatbase。";
+    ? `谈到 ${name}：请严格使用下方 CompetitorKnowledge 条目，禁止贬低竞品。条目未写明对方价格时，禁止猜测报价或编造价格差。`
+    : "竞品对比请严格使用下方 CompetitorKnowledge / SalesStrategy，禁止贬低竞品。未命中的竞品价格一律视为未知，禁止编造。先比较能力、计费方式、使用场景，再引导 API 调用 / AI 客服 / Token 套餐。";
 }
 
 function buildPromptBlock(decision: Omit<SalesDecision, "promptBlock">): string {
@@ -251,7 +275,7 @@ function buildPromptBlock(decision: Omit<SalesDecision, "promptBlock">): string 
     decision.intent === "PRODUCT_COMPARE"
       ? `\n【竞品话术】\n${competitorTalkTrack()}`
       : decision.intent === "PRICE_QUERY"
-        ? `\n【价格话术】先确认使用场景，再给套餐；避免一上来甩完整价目表。明确购买意图时可引用实时套餐目录并引导 /recharge。`
+        ? `\n【价格话术】先确认使用场景，再给套餐；避免一上来甩完整价目表。明确购买意图时只引用【当前推荐套餐】并引导 /recharge。`
         : decision.intent === "MODEL_SELECT" || decision.readyToRecommend
           ? `\n【推荐话术】用「根据你的场景，更建议 …」说明；引导顶栏切换；需要额度再提充值。`
           : `\n【问诊话术】先理解需求，再推荐；每次 2～4 个短问题。`;
@@ -266,7 +290,7 @@ ${talk}
 
 【决策执行规则】
 1. 严格按上述意图与客户类型组织回复
-2. PRODUCT_COMPARE：不攻击竞品，用差异化价值
+2. PRODUCT_COMPARE：不攻击竞品；未命中竞品价格则禁止编造报价或「便宜 X%」；先比较能力/计费/场景，再引导方案
 3. TECH_REQUIREMENT / GENERAL_CHAT 且未就绪：先问诊，禁止直接甩套餐
 4. 推荐时只引导 LIGHT/STANDARD/PREMIUM（付费通道），SALES 自身保持顾问身份`;
 }
@@ -316,4 +340,212 @@ export function buildSalesDecision(message: string): SalesDecision {
     ...partial,
     promptBlock: buildPromptBlock(partial),
   };
+}
+
+/** 历史订单快照（升级推荐用） */
+export type UpgradeOrderSnapshot = {
+  packageName: string;
+  tokenAmount: number;
+};
+
+/** 套餐升级建议：与【套餐推荐】共用同一目标套餐 */
+export type PackageUpgradeAdvice = {
+  previousPackageName: string;
+  currentNeedLabel: string;
+  recommendedPackageName: string;
+  recommendedTokenAmount: number;
+  recommendedPrice: number;
+  message: string;
+};
+
+export type UpsellCheckResult = {
+  shouldUpsell: boolean;
+  upgradeReason: string | null;
+  previousPackageName: string | null;
+  currentNeedLabel: string | null;
+  push: "STRONG" | "MEDIUM" | "SOFT" | null;
+};
+
+function isLowTierPackage(name: string, tokenAmount: number): boolean {
+  if (/基础|入门|尝鲜|basic/i.test(name)) return true;
+  return tokenAmount > 0 && tokenAmount <= 15_000;
+}
+
+/** 纯问价/充值咨询，不触发升级话术 */
+function isPurePriceInquiry(message: string, intent: SalesIntent): boolean {
+  const t = message.trim();
+  if (intent !== "PRICE_QUERY") return false;
+  if (/高并发|架构|分布式|微服务|复杂算法|企业级|大规模|开发|代码|系统/.test(t)) {
+    return false;
+  }
+  return /^(套餐|价格|多少钱|充值|购买|费用|计费).{0,30}$/u.test(t);
+}
+
+function isHigherDemandContext(input: {
+  message: string;
+  intent: SalesIntent;
+  signals: ReturnType<typeof inferSignals>;
+  demandSignals: CustomerDemandSignals;
+}): boolean {
+  const { message, intent, signals, demandSignals } = input;
+  const t = message.toLowerCase();
+
+  if (isPurePriceInquiry(message, intent)) return false;
+
+  if (signals.heavyArch) return true;
+  if (signals.enterprise) return true;
+  if (/高并发|架构设计|分布式|微服务|复杂算法|企业级|大规模调用|深度推理|高频/.test(t)) {
+    return true;
+  }
+  if (/不够用|额度不够|token\s*不够/.test(t) && /开发|项目|代码|调用/.test(t)) {
+    return true;
+  }
+  if (
+    demandSignals.needs.some((n) =>
+      /系统架构|复杂算法|代码开发|高并发/.test(n),
+    )
+  ) {
+    return true;
+  }
+  if (demandSignals.techLevel === "expert") return true;
+  if (
+    (intent === "TECH_REQUIREMENT" || intent === "ENTERPRISE_PLAN") &&
+    /开发|架构|系统|并发|算法|项目/.test(t)
+  ) {
+    return true;
+  }
+  return false;
+}
+
+function labelCurrentNeed(
+  message: string,
+  demandSignals: CustomerDemandSignals,
+): string {
+  if (/高并发/.test(message)) return "高并发调用";
+  if (/分布式|微服务/.test(message)) return "分布式/微服务架构";
+  if (/复杂算法|算法/.test(message)) return "复杂算法场景";
+  if (/开发|代码|项目不够|不够用/.test(message)) return "代码开发";
+  if (/企业级|企业方案|公司|团队|\d+\s*个人/.test(message)) return "企业/团队使用";
+  if (demandSignals.needs.includes("系统架构")) return "系统架构";
+  if (demandSignals.needs.includes("代码开发")) return "代码开发";
+  if (demandSignals.needs.includes("复杂算法")) return "复杂算法";
+  return demandSignals.needs[0] ?? "更高强度使用";
+}
+
+/**
+ * 是否触发套餐升级（不决定具体套餐）。
+ * 依据：用量超过历史套餐容量，或曾购低套餐 + 需求明显提高；纯问价除外。
+ */
+export function shouldUpsellPackage(input: {
+  message: string;
+  intent: SalesIntent;
+  signals: ReturnType<typeof inferSignals>;
+  demandSignals: CustomerDemandSignals;
+  recentOrders: UpgradeOrderSnapshot[];
+  usageEstimate?: UsageEstimate | null;
+}): UpsellCheckResult {
+  const empty = {
+    shouldUpsell: false,
+    upgradeReason: null,
+    previousPackageName: null,
+    currentNeedLabel: null,
+    push: null as UpsellCheckResult["push"],
+  };
+
+  const lastOrder = input.recentOrders[0] ?? null;
+  if (!lastOrder) return empty;
+
+  if (isPurePriceInquiry(input.message, input.intent)) {
+    return {
+      ...empty,
+      previousPackageName: lastOrder.packageName,
+    };
+  }
+
+  const estimated = input.usageEstimate?.estimatedTokens ?? 0;
+  const lastTokens = lastOrder.tokenAmount;
+  const exceedsCapacity =
+    lastTokens > 0 && estimated > lastTokens;
+
+  const lowPurchase = input.recentOrders.find((o) =>
+    isLowTierPackage(o.packageName, o.tokenAmount),
+  );
+
+  const higherDemand = isHigherDemandContext({
+    message: input.message,
+    intent: input.intent,
+    signals: input.signals,
+    demandSignals: input.demandSignals,
+  });
+
+  const shouldUpsell = exceedsCapacity || Boolean(lowPurchase && higherDemand);
+  if (!shouldUpsell) {
+    return {
+      ...empty,
+      previousPackageName: lastOrder.packageName,
+    };
+  }
+
+  const currentNeedLabel = labelCurrentNeed(
+    input.message,
+    input.demandSignals,
+  );
+
+  let push: UpsellCheckResult["push"] = "SOFT";
+  if (lastTokens > 0 && estimated > lastTokens * 1.5) push = "STRONG";
+  else if (lastTokens > 0 && estimated > lastTokens * 1.2) push = "MEDIUM";
+
+  const prev = lowPurchase ?? lastOrder;
+  const upgradeReason = exceedsCapacity
+    ? `${currentNeedLabel}需求超过${prev.packageName}容量（预估 ${estimated.toLocaleString()} Token > ${lastTokens.toLocaleString()} Token）`
+    : `曾购 ${prev.packageName}，当前需求为 ${currentNeedLabel}，建议升级套餐`;
+
+  return {
+    shouldUpsell: true,
+    upgradeReason,
+    previousPackageName: prev.packageName,
+    currentNeedLabel,
+    push,
+  };
+}
+
+/**
+ * 升级推荐话术：使用 recommendTokenPackage 已选定的同一套餐。
+ */
+export function buildPackageUpgradeAdvice(input: {
+  previousPackageName: string;
+  currentNeedLabel: string;
+  upgradeReason: string;
+  recommendedPackage: {
+    name: string;
+    tokenAmount: number;
+    price: number;
+  };
+}): PackageUpgradeAdvice {
+  const { previousPackageName, currentNeedLabel, recommendedPackage } = input;
+  const needClause = /开发/.test(currentNeedLabel)
+    ? "当前开发需求更高"
+    : `如果当前需求是${currentNeedLabel}`;
+  const message = `您之前使用的是${previousPackageName}，${needClause}，建议升级到${recommendedPackage.name}（${recommendedPackage.tokenAmount.toLocaleString()} Token，¥${recommendedPackage.price}）。`;
+
+  return {
+    previousPackageName,
+    currentNeedLabel,
+    recommendedPackageName: recommendedPackage.name,
+    recommendedTokenAmount: recommendedPackage.tokenAmount,
+    recommendedPrice: recommendedPackage.price,
+    message,
+  };
+}
+
+export function formatPackageUpgradeForPrompt(
+  advice: PackageUpgradeAdvice | null,
+): string {
+  if (!advice) {
+    return `【升级建议】
+暂不升级。纯问价或容量仍够时，不要主动强调升级。`;
+  }
+  return `【升级建议】
+${advice.message}
+（与【套餐推荐】为同一套餐；纯问价时不要主动强调升级）`;
 }

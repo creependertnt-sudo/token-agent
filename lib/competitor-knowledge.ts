@@ -77,11 +77,14 @@ export async function searchCompetitorKnowledge(input: {
 }
 
 export function formatCompetitorsForPrompt(hits: CompetitorHit[]): string {
+  const priceRule = `【竞品价格纪律】CompetitorKnowledge 未写明的对方报价视为未知。禁止猜测竞品价格、编造价格差、声称「比某某便宜 X%」。应说明：不同平台价格会根据模型、调用量和套餐变化，我无法提供未查询到的实时竞品报价。然后介绍自家计费方式与 Token 套餐，并询问需求更偏 API 调用、AI 客服还是 Token 套餐。`;
+
   if (hits.length === 0) {
-    return "（本次未命中具体竞品条目；可用通用「计费透明 / 自主选档 / 售前问诊」话术，勿贬低竞品。）";
+    return `（本次未命中具体竞品条目；可用通用「计费透明 / 自主选档 / 售前问诊」话术，勿贬低竞品。禁止编造未入库竞品的价格。）
+${priceRule}`;
   }
 
-  return hits
+  const body = hits
     .map(
       (h) => `### ${h.name}（${h.slug}）
 简介：${h.summary}
@@ -90,4 +93,6 @@ export function formatCompetitorsForPrompt(hits: CompetitorHit[]): string {
 推荐话术：${h.talkTrack}`,
     )
     .join("\n\n");
+
+  return `${body}\n\n${priceRule}`;
 }

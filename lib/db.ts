@@ -8,7 +8,7 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 /** 升级此数字可在 dev HMR 下强制丢弃旧 Prisma 单例 */
-const PRISMA_CACHE_KEY = 11;
+const PRISMA_CACHE_KEY = 22;
 
 function createPrismaClient() {
   const dbPath = path.join(process.cwd(), "data.db");
