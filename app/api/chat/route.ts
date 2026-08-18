@@ -26,7 +26,8 @@ import {
 import { buildSalesTemplateReply } from "@/lib/sales-reply";
 import { runSalesPipeline, type SalesPipelineResult } from "@/lib/sales-pipeline";
 import { TOOL_USAGE_GUIDE } from "@/lib/tool-registry";
-import { runAgentRuntime } from "@/lib/agent-runtime";
+import { loadAgentRuntimeConfig, runAgentRuntime } from "@/lib/agent-runtime";
+import { scopeTenantId } from "@/lib/tenant-context";
 import { detectToolQueryMode } from "@/lib/tool-query-mode";
 import {
   createAgentTrace,
@@ -34,6 +35,8 @@ import {
 } from "@/lib/observability/agent-trace";
 import { recordCaughtAgentError } from "@/lib/observability/error-trace";
 import { startAgentRun, finishAgentRun } from "@/lib/agent-observability/runs";
+import { createRequestId } from "@/lib/request-context";
+import { publicErrorMessage } from "@/lib/error-handler";
 import { inferMemoryUsage } from "@/lib/agent-observability/memory";
 import {
   getLatestRecommendedPackage,
@@ -316,6 +319,7 @@ export async function POST(req: Request) {
       );
     }
 
+    const requestId = createRequestId();
     const conversationIdForStream = conversation.id;
     const obsStarted = Date.now();
     const agentTrace = await createAgentTrace({
@@ -332,6 +336,7 @@ export async function POST(req: Request) {
       intent,
       memoryInjectedCount: memories.length,
       memoryCategory: memories[0]?.category ?? null,
+      requestId,
     });
     let streamLlmDuration = 0;
     let streamToolDuration = 0;
@@ -460,6 +465,10 @@ export async function POST(req: Request) {
               : null;
           const enableReasoning = await resolveEnableReasoning(lockedType);
           const memoryRounds = CONTEXT_HISTORY_ROUNDS;
+          const agentConfig = await loadAgentRuntimeConfig(
+            lockedType,
+            scopeTenantId(user.tenantId),
+          );
 
           const systemPrompt = buildAgentSystemPrompt({
             serviceType: lockedType,
@@ -469,6 +478,7 @@ export async function POST(req: Request) {
             salesPipelineContext,
             modelConfig: modelConfigRow,
             modelCapability: modelCapabilityRow,
+            configPrompt: agentConfig.systemPrompt,
           });
 
           const promptIdentity = extractPromptModelIdentity(systemPrompt);
@@ -538,6 +548,8 @@ ${TOOL_USAGE_GUIDE}` },
             toolQueryMode,
             traceId: agentTrace?.id ?? null,
             agentRunId: agentRun?.id ?? null,
+            serviceType: lockedType,
+            tenantId: scopeTenantId(user.tenantId),
             onDelta: (text) => emit("delta", { text }),
           });
           streamToolNames = agentOut.toolNames;
@@ -733,7 +745,7 @@ ${TOOL_USAGE_GUIDE}` },
           intent,
           conversationId: conversationIdForStream,
         });
-        await recordCaughtAgentError(error, agentTrace?.id);
+        await recordCaughtAgentError(error, requestId);
         await finishAgentRun(agentRun?.id, {
           success: false,
           error,
@@ -766,8 +778,7 @@ ${TOOL_USAGE_GUIDE}` },
     }
     return NextResponse.json(
       {
-        error:
-          error instanceof Error ? error.message : "Internal server error.",
+        error: publicErrorMessage(error),
       },
       { status: 500 },
     );

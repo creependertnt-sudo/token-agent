@@ -48,4 +48,6 @@ export type AuthUser = {
   theme?: string | null;
   tokenBalance: number;
   freeChatCount: number;
+  /** USER | ADMIN；缺省按普通用户 */
+  role?: string | null;
 };

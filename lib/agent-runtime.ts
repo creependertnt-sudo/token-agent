@@ -9,6 +9,7 @@ import { createToolTrace, finishToolTrace } from "@/lib/observability/tool-trace
 import { recordAgentError } from "@/lib/observability/error-trace";
 import { recordAgentToolCall } from "@/lib/agent-observability/tool-calls";
 import { prisma } from "@/lib/db";
+import { loadAgentRuntimeConfig } from "@/lib/agent-config";
 
 const MAX_TOOL_ROUNDS = 3;
 
@@ -40,6 +41,9 @@ export type AgentRuntimeInput = {
   traceId?: string | null;
   /** 第七阶段 AgentRun；缺省则不写 AgentToolCall */
   agentRunId?: string | null;
+  /** 有值时从 AgentConfig 加载 model / temperature / tools */
+  serviceType?: string;
+  tenantId?: string | null;
 };
 
 export type AgentRuntimeResult = {
@@ -146,9 +150,12 @@ async function writeToolResultToAgentLog(
   }
 }
 
+export { loadAgentRuntimeConfig } from "@/lib/agent-config";
+
 /**
  * Agent Runtime：LLM 判断是否需要 Tool → 执行 → 再生成回答。
  * 不替代 sales-pipeline；只负责实时查数。
+ * serviceType 存在时从 AgentConfig 加载 model / temperature / tools。
  */
 export async function runAgentRuntime(
   input: AgentRuntimeInput,
@@ -158,6 +165,22 @@ export async function runAgentRuntime(
   const toolNames: string[] = [];
   let llmDuration = 0;
   let toolDuration = 0;
+
+  const agentConfig = input.serviceType
+    ? await loadAgentRuntimeConfig(input.serviceType, input.tenantId)
+    : null;
+  const model =
+    agentConfig?.source === "database" ? agentConfig.model : input.model;
+  const temperature =
+    agentConfig?.source === "database"
+      ? agentConfig.temperature
+      : input.temperature;
+
+  if (agentConfig) {
+    console.log(
+      `[agent-config] serviceType=${agentConfig.serviceType} source=${agentConfig.source} model=${model} temperature=${temperature} tools=${agentConfig.tools.join(",")}`,
+    );
+  }
 
   if (toolQueryMode) {
     for (let i = messages.length - 1; i >= 0; i -= 1) {
@@ -177,10 +200,10 @@ export async function runAgentRuntime(
     const llmStarted = Date.now();
     const step = await streamOnce({
       client: input.client,
-      model: input.model,
+      model,
       messages,
       maxTokens: input.maxTokens,
-      temperature: input.temperature,
+      temperature,
       thinkingEnabled: input.thinkingEnabled,
       toolsEnabled: !forceAnswer,
       emit: true,
@@ -274,10 +297,10 @@ export async function runAgentRuntime(
   const fallbackStarted = Date.now();
   const fallback = await streamOnce({
     client: input.client,
-    model: input.model,
+    model,
     messages,
     maxTokens: input.maxTokens,
-    temperature: input.temperature,
+    temperature,
     thinkingEnabled: input.thinkingEnabled,
     toolsEnabled: false,
     emit: true,

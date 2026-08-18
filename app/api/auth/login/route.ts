@@ -48,6 +48,7 @@ export async function POST(req: Request) {
       theme: user.theme,
       tokenBalance: user.tokenBalance,
       freeChatCount: user.freeChatCount,
+      role: user.role,
     };
 
     const token = signSession(user.id);

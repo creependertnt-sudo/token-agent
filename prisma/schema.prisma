@@ -1,4 +1,5 @@
 // This is your Prisma schema file
+// Production / PostgreSQL. Local SQLite uses prisma/schema.sqlite.prisma.
 
 generator client {
   provider = "prisma-client"
@@ -6,7 +7,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
 }
 
 enum OrderStatus {
@@ -36,6 +37,26 @@ enum AIServiceType {
   PREMIUM
 }
 
+enum UserRole {
+  USER
+  ADMIN
+}
+
+model Tenant {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+
+  users                User[]
+  agents               AgentConfig[]
+  salesKnowledge       SalesKnowledge[]
+  competitorKnowledge  CompetitorKnowledge[]
+  agentMemories        AgentMemory[]
+  customerMemories     CustomerMemory[]
+
+  @@index([createdAt])
+}
+
 model User {
   id            String   @id @default(cuid())
   email         String   @unique
@@ -46,10 +67,14 @@ model User {
   avatar        String?
   /** 主题偏好：light | dark | system */
   theme         String   @default("dark")
+  /** USER 普通用户；ADMIN 可访问 /admin 与 /api/admin */
+  role          UserRole @default(USER)
   tokenBalance  Int      @default(0)
   freeChatCount Int      @default(20)
   createdAt     DateTime @default(now())
+  tenantId      String?
 
+  tenant            Tenant?               @relation(fields: [tenantId], references: [id], onDelete: SetNull)
   orders            Order[]
   conversations     Conversation[]
   memories          AgentMemory[]
@@ -61,21 +86,26 @@ model User {
   rateLimitWindows  RateLimitWindow[]
 
   @@index([createdAt])
+  @@index([role])
+  @@index([tenantId])
 }
 
 model AgentMemory {
   id        String         @id @default(cuid())
   userId    String
+  tenantId  String?
   category  MemoryCategory
   content   String
   createdAt DateTime       @default(now())
   updatedAt DateTime       @updatedAt
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: SetNull)
 
   @@index([userId])
   @@index([userId, category])
   @@index([userId, updatedAt])
+  @@index([tenantId])
 }
 
 /**
@@ -123,11 +153,14 @@ model CustomerMemory {
   lastIntent        String   @default("")
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
+  tenantId          String?
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: SetNull)
 
   @@index([customerStage])
   @@index([updatedAt])
+  @@index([tenantId])
 }
 
 model AIProvider {
@@ -327,9 +360,13 @@ model SalesKnowledge {
   keywords  String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  tenantId  String?
+
+  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: SetNull)
 
   @@index([category])
   @@index([updatedAt])
+  @@index([tenantId])
 }
 
 /** A/B/C 模型能力说明（SALES 推荐用） */
@@ -361,7 +398,7 @@ model CompetitorKnowledge {
   id          String   @id @default(cuid())
   /** Coze | Dify | FastGPT | Chatbase */
   name        String
-  slug        String   @unique
+  slug        String
   summary     String
   strengths   String
   /** 相对 Token AI 的差异（不攻击） */
@@ -370,8 +407,13 @@ model CompetitorKnowledge {
   keywords    String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  tenantId    String?
 
+  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, slug])
   @@index([name])
+  @@index([tenantId])
 }
 
 /**
@@ -640,13 +682,36 @@ model AgentRun {
   memoryInjectedCount Int?
   memoryUsedCount     Int?
   memoryCategory      String?
+  /** 单次请求关联 ID，便于日志与错误对齐 */
+  requestId           String?
   createdAt           DateTime @default(now())
 
   toolCalls AgentToolCall[]
+  feedbacks AgentFeedback[]
 
   @@index([userId, createdAt])
   @@index([serviceType, createdAt])
   @@index([success])
+  @@index([requestId])
+  @@index([createdAt])
+}
+
+/**
+ * 人工对一次 AgentRun 的质量评分。只用于评估，不参与扣费 / 路由 / 推荐。
+ */
+model AgentFeedback {
+  id         String   @id @default(cuid())
+  agentRunId String
+  /** 1–5 */
+  rating     Int
+  comment    String?
+  createdAt  DateTime @default(now())
+
+  run AgentRun @relation(fields: [agentRunId], references: [id], onDelete: Cascade)
+
+  @@index([agentRunId])
+  @@index([createdAt])
+  @@index([rating])
 }
 
 model AgentToolCall {
@@ -663,5 +728,44 @@ model AgentToolCall {
 
   @@index([agentRunId])
   @@index([toolName, createdAt])
+  @@index([toolName])
+  @@index([createdAt])
   @@index([success])
+}
+
+/**
+ * Agent 运行时配置（Prompt / 模型 / 温度）。
+ * 不参与扣费、销售决策、商品卡、Tool 协议。
+ */
+model AgentConfig {
+  id           String   @id @default(cuid())
+  name         String
+  serviceType  String
+  systemPrompt String
+  model        String
+  temperature  Float    @default(0.7)
+  enabled      Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  tenantId     String?
+
+  tenant   Tenant?              @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  versions AgentConfigVersion[]
+
+  @@unique([tenantId, serviceType])
+  @@index([enabled])
+  @@index([tenantId])
+}
+
+model AgentConfigVersion {
+  id         String   @id @default(cuid())
+  agentId    String
+  oldPrompt  String
+  newPrompt  String
+  changedAt  DateTime @default(now())
+  changedBy  String?
+
+  agent AgentConfig @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@index([agentId, changedAt])
 }

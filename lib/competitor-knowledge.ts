@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { scopeTenantId } from "@/lib/tenant-context";
 
 export type CompetitorHit = {
   id: string;
@@ -19,10 +20,13 @@ const KNOWN_SLUGS = ["coze", "dify", "fastgpt", "chatbase"] as const;
 export async function searchCompetitorKnowledge(input: {
   query: string;
   limit?: number;
+  tenantId?: string | null;
 }): Promise<CompetitorHit[]> {
   const limit = Math.min(Math.max(input.limit ?? 4, 1), 10);
   const q = input.query.trim().toLowerCase();
+  const tenantId = scopeTenantId(input.tenantId);
   const rows = await prisma.competitorKnowledge.findMany({
+    where: { tenantId },
     orderBy: { name: "asc" },
   });
 

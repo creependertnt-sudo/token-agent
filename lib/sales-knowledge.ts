@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { scopeTenantId } from "@/lib/tenant-context";
 
 export type SalesKnowledgeHit = {
   id: string;
@@ -118,15 +119,20 @@ export async function searchSalesKnowledge(input: {
   limit?: number;
   category?: string;
   preferredCategories?: string[];
+  tenantId?: string | null;
 }): Promise<SalesKnowledgeHit[]> {
   const limit = Math.min(Math.max(input.limit ?? 5, 1), 20);
   const tokens = tokenizeQuery(input.query);
   const preferred = new Set(
     (input.preferredCategories ?? []).map((c) => c.toLowerCase()),
   );
+  const tenantId = scopeTenantId(input.tenantId);
 
   const rows = await prisma.salesKnowledge.findMany({
-    where: input.category ? { category: input.category } : undefined,
+    where: {
+      tenantId,
+      ...(input.category ? { category: input.category } : {}),
+    },
     orderBy: { updatedAt: "desc" },
     take: 200,
   });

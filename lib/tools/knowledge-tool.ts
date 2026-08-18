@@ -1,5 +1,6 @@
 import { searchCompetitorKnowledge } from "@/lib/competitor-knowledge";
 import { searchSalesKnowledge } from "@/lib/sales-knowledge";
+import { resolveTenantIdByUserId } from "@/lib/tenant-context";
 import type { AgentTool } from "@/lib/tools/types";
 
 function asQuery(args: Record<string, unknown>): string {
@@ -27,9 +28,10 @@ export const knowledgeTool: AgentTool = {
     if (!query) {
       return { error: "query_required" };
     }
+    const tenantId = await resolveTenantIdByUserId(ctx.userId);
     const [sales, competitors] = await Promise.all([
-      searchSalesKnowledge({ query, limit: 5 }),
-      searchCompetitorKnowledge({ query, limit: 4 }),
+      searchSalesKnowledge({ query, limit: 5, tenantId }),
+      searchCompetitorKnowledge({ query, limit: 4, tenantId }),
     ]);
     return {
       salesKnowledge: sales.map((h) => ({

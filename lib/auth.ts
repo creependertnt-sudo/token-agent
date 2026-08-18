@@ -152,10 +152,12 @@ export async function getCurrentUser() {
         theme: true,
         tokenBalance: true,
         freeChatCount: true,
+        role: true,
+        tenantId: true,
         createdAt: true,
       },
     });
-    console.log("[auth] getCurrentUser:", user ? { id: user.id, email: user.email, theme: user.theme } : null);
+    console.log("[auth] getCurrentUser:", user ? { id: user.id, email: user.email, theme: user.theme, role: user.role } : null);
     return user;
   } catch (error) {
     console.error("[auth] getCurrentUser Prisma error:", error);

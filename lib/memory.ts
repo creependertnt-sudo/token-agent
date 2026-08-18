@@ -1,5 +1,6 @@
 import { MemoryCategory } from "@/app/generated/prisma/enums";
 import { prisma } from "@/lib/db";
+import { resolveTenantIdByUserId } from "@/lib/tenant-context";
 import type OpenAI from "openai";
 
 export type MemoryItem = {
@@ -27,8 +28,9 @@ const LOW_VALUE_RE =
   /^(你好|您好|哈喽|谢谢|感谢|嗯+|好的|ok|okay|是的|不是|再见).{0,8}$/i;
 
 export async function getUserMemories(userId: string): Promise<MemoryItem[]> {
+  const tenantId = await resolveTenantIdByUserId(userId);
   return prisma.agentMemory.findMany({
-    where: { userId },
+    where: { userId, tenantId },
     orderBy: [{ category: "asc" }, { updatedAt: "desc" }],
     select: {
       id: true,
@@ -319,6 +321,7 @@ ${existingText}`,
       const created = await prisma.agentMemory.create({
         data: {
           userId,
+          tenantId: await resolveTenantIdByUserId(userId),
           category: item.category,
           content,
         },

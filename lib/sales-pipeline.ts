@@ -12,6 +12,7 @@ import {
   formatCompetitorsForPrompt,
   searchCompetitorKnowledge,
 } from "@/lib/competitor-knowledge";
+import { resolveTenantIdByUserId } from "@/lib/tenant-context";
 import {
   listActivePackages,
 } from "@/lib/catalog";
@@ -193,6 +194,7 @@ export async function runSalesPipeline(
   // 1) 意图识别（规则分类，决定后续查哪些库）
   const decision = buildSalesDecision(message);
   const signals = extractCustomerDemandSignals(message);
+  const tenantId = await resolveTenantIdByUserId(options?.userId);
 
   const wantCompare =
     isModelCompareQuestion(message) ||
@@ -221,11 +223,12 @@ export async function runSalesPipeline(
       query: message,
       limit: 5,
       preferredCategories: decision.knowledgeCategories,
+      tenantId,
     }),
     listModelConfigs(),
     listModelCapabilities(),
     wantCompetitors
-      ? searchCompetitorKnowledge({ query: message, limit: 4 })
+      ? searchCompetitorKnowledge({ query: message, limit: 4, tenantId })
       : Promise.resolve([]),
     listSalesStrategies(),
     listCustomerProfiles(),

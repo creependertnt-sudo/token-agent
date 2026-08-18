@@ -8,6 +8,7 @@ export async function startAgentRun(input: {
   intent?: string | null;
   memoryInjectedCount?: number | null;
   memoryCategory?: string | null;
+  requestId?: string | null;
 }): Promise<{ id: string; startedAt: number } | null> {
   try {
     const row = await prisma.agentRun.create({
@@ -19,9 +20,13 @@ export async function startAgentRun(input: {
         success: false,
         memoryInjectedCount: input.memoryInjectedCount ?? null,
         memoryCategory: input.memoryCategory ?? null,
+        requestId: input.requestId ?? null,
       },
       select: { id: true },
     });
+    console.log(
+      `[agent-run] requestId=${input.requestId ?? "-"} id=${row.id} type=${input.serviceType}`,
+    );
     return { id: row.id, startedAt: Date.now() };
   } catch (error) {
     console.error("[agent-run]", error);

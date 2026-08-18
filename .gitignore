@@ -35,6 +35,10 @@ yarn-error.log*
 .env
 .env.*
 !.env.example
+!.env.production.example
+
+# sqlite → postgres dump artifacts
+/exports
 
 # local databases (never commit user data)
 *.db

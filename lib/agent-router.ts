@@ -293,6 +293,8 @@ type AgentPromptInput = {
   modelConfig?: AgentModelConfigInput | null;
   /** LIGHT/STANDARD/PREMIUM：数据库 ModelCapability */
   modelCapability?: AgentModelCapabilityInput | null;
+  /** AgentConfig.systemPrompt；缺省则用代码内默认文案 */
+  configPrompt?: string;
 };
 
 /**
@@ -310,6 +312,7 @@ export function buildAgentSystemPrompt(input: AgentPromptInput): string {
     salesPipelineContext,
     modelConfig,
     modelCapability,
+    configPrompt,
   } = input;
   if (!isChatServiceType(serviceType)) {
     throw new Error(`未知 serviceType：${serviceType}`);
@@ -380,6 +383,21 @@ ${modelConfig.systemInstructions ? `行为说明：\n${modelConfig.systemInstruc
 【销售知识库检索结果】
 ${knowledgeBlock}`;
 
+      const body = configPrompt?.trim();
+      if (body) {
+        return `${body}
+
+${identityBlock}
+
+用户余额（仅供参考）：${tokenBalance} Token。
+${salesCatalog?.conversionHint?.trim() || (salesCatalog?.showProducts ? "提示：本轮可推荐最终套餐并引导购买，禁止罗列全部套餐。" : "提示：当前偏咨询，优先问诊与推荐通道。")}
+
+【本轮流水线结果】
+${pipelineBlock}
+
+${mem}`;
+      }
+
       return `你是「Token AI客服」——平台免费销售转化顾问（SALES 通道）。
 
 ${identityBlock}
@@ -423,6 +441,21 @@ ${mem}`;
     case "STANDARD":
     case "PREMIUM": {
       const limits = SERVICE_GENERATION_LIMITS[serviceType];
+      const body = configPrompt?.trim();
+      if (body) {
+        return `${body}
+
+${identityBlock}
+
+${modelConfigBlock}
+
+${modelCapabilityBlock}
+
+【生成约束（技术上限，非能力营销文案）】
+- maxTokens≈${limits.maxTokens}；温度≈${limits.temperature}；正文建议不超过约 ${limits.maxChars} 字
+
+${mem}`;
+      }
       return `你是本通道锁定的助手：${cfg.name}（selectedServiceType=${serviceType}）。
 
 ${identityBlock}

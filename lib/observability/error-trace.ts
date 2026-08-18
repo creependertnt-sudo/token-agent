@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { publicErrorMessage } from "@/lib/error-handler";
 
 export type AgentErrorType =
   | "deepseek"
@@ -40,7 +41,7 @@ export async function recordAgentError(input: {
     const row = await prisma.agentErrorLog.create({
       data: {
         type: input.type,
-        message: input.message.slice(0, 4000),
+        message: publicErrorMessage(input.message).slice(0, 4000),
         traceId: input.traceId ?? null,
       },
       select: { id: true },

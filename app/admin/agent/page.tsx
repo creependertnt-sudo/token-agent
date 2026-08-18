@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { authFetch } from "@/lib/client-auth";
+import { authFetch, readApiError } from "@/lib/client-auth";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 
 type ToolRank = { name: string; count: number };
@@ -54,7 +54,7 @@ export default function AdminAgentPage() {
         error?: string;
       };
       if (!response.ok) {
-        throw new Error(data.error ?? "读取统计失败");
+        throw new Error(readApiError(data, "读取统计失败"));
       }
       setStats(data);
     } catch (err) {
@@ -110,6 +110,24 @@ export default function AdminAgentPage() {
             >
               {refreshing ? "刷新中..." : "刷新"}
             </button>
+            <Link
+              href="/admin/sales"
+              className="rounded-xl border border-panel-border px-4 py-2.5 text-sm text-muted hover:text-foreground"
+            >
+              销售分析
+            </Link>
+            <Link
+              href="/admin/knowledge"
+              className="rounded-xl border border-panel-border px-4 py-2.5 text-sm text-muted hover:text-foreground"
+            >
+              知识库
+            </Link>
+            <Link
+              href="/admin/evaluation"
+              className="rounded-xl border border-panel-border px-4 py-2.5 text-sm text-muted hover:text-foreground"
+            >
+              质量评估
+            </Link>
             <Link
               href="/"
               className="rounded-xl border border-panel-border px-4 py-2.5 text-sm text-muted hover:text-foreground"

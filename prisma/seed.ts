@@ -1,10 +1,6 @@
-import { PrismaClient } from "../app/generated/prisma/client";
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
-import path from "path";
-
-const dbPath = path.join(process.cwd(), "data.db");
-const adapter = new PrismaBetterSqlite3({ url: `file:${dbPath}` });
-const prisma = new PrismaClient({ adapter });
+import { prisma } from "../lib/db";
+import { seedAgentConfigs } from "./seed-agent";
+import { ensureDefaultTenant, DEFAULT_TENANT_ID } from "../lib/tenant-context";
 
 const DEEPSEEK_PROVIDER = {
   name: "DeepSeek",
@@ -284,6 +280,8 @@ Token AI 不贬低 Chatbase。差异：
 ];
 
 async function main() {
+  const tenant = await ensureDefaultTenant();
+
   // 1) 解绑服务模型，便于删除旧厂商/模型
   await prisma.aIService.updateMany({ data: { modelId: null } });
 
@@ -361,9 +359,11 @@ async function main() {
   }
 
   // 7) SALES 知识库（RAG）
-  await prisma.salesKnowledge.deleteMany();
+  await prisma.salesKnowledge.deleteMany({ where: { tenantId: tenant.id } });
   for (const item of SALES_KNOWLEDGE) {
-    await prisma.salesKnowledge.create({ data: item });
+    await prisma.salesKnowledge.create({
+      data: { ...item, tenantId: DEFAULT_TENANT_ID },
+    });
   }
 
   // 8) ModelCapability（兼容旧表）+ ModelConfig（权威 A/B/C 配置）
@@ -448,7 +448,9 @@ async function main() {
   }
 
   // 9) CompetitorKnowledge
-  await prisma.competitorKnowledge.deleteMany();
+  await prisma.competitorKnowledge.deleteMany({
+    where: { tenantId: tenant.id },
+  });
   const COMPETITORS = [
     {
       name: "Coze",
@@ -497,7 +499,9 @@ async function main() {
   ] as const;
 
   for (const row of COMPETITORS) {
-    await prisma.competitorKnowledge.create({ data: { ...row } });
+    await prisma.competitorKnowledge.create({
+      data: { ...row, tenantId: DEFAULT_TENANT_ID },
+    });
   }
 
   // 10) CustomerProfile
@@ -809,6 +813,8 @@ async function main() {
     "Service → Model:",
     bindings.map((b) => `${b.type} → ${b.model?.name ?? "(null)"}`),
   );
+
+  await seedAgentConfigs();
 }
 
 main()

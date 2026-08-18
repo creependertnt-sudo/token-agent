@@ -3,6 +3,7 @@ import {
   searchSalesKnowledge,
   SALES_KNOWLEDGE_CATEGORIES,
 } from "@/lib/sales-knowledge";
+import { getCurrentTenant, DEFAULT_TENANT_ID } from "@/lib/tenant-context";
 
 /**
  * GET /api/sales/search?q=...&limit=5&category=pricing
@@ -32,7 +33,13 @@ export async function GET(req: Request) {
       );
     }
 
-    const hits = await searchSalesKnowledge({ query: q, limit, category });
+    const tenant = await getCurrentTenant();
+    const hits = await searchSalesKnowledge({
+      query: q,
+      limit,
+      category,
+      tenantId: tenant?.id ?? DEFAULT_TENANT_ID,
+    });
 
     return NextResponse.json({
       query: q,
@@ -88,7 +95,13 @@ export async function POST(req: Request) {
       );
     }
 
-    const hits = await searchSalesKnowledge({ query: q, limit, category });
+    const tenant = await getCurrentTenant();
+    const hits = await searchSalesKnowledge({
+      query: q,
+      limit,
+      category,
+      tenantId: tenant?.id ?? DEFAULT_TENANT_ID,
+    });
 
     return NextResponse.json({
       query: q,

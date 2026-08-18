@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { extractCustomerDemandSignals } from "@/lib/customer-analysis";
 import { detectSalesIntent } from "@/lib/sales-decision";
+import { resolveTenantIdByUserId } from "@/lib/tenant-context";
 
 export const CUSTOMER_STAGES = [
   "NEW",
@@ -76,7 +77,10 @@ function normalizeConfidence(value: string): ConfidenceLevel {
 export async function getCustomerMemory(
   userId: string,
 ): Promise<CustomerMemoryRow | null> {
-  const row = await prisma.customerMemory.findUnique({ where: { userId } });
+  const tenantId = await resolveTenantIdByUserId(userId);
+  const row = await prisma.customerMemory.findFirst({
+    where: { userId, tenantId },
+  });
   return row ? mapRow(row) : null;
 }
 
@@ -258,8 +262,9 @@ export async function extractAndUpdateCustomerMemory(
   const purchaseIntent = extractPurchaseIntent(input.userMessage);
   const preferences = purchaseIntent;
 
-  const existing = await prisma.customerMemory.findUnique({
-    where: { userId: input.userId },
+  const tenantId = await resolveTenantIdByUserId(input.userId);
+  const existing = await prisma.customerMemory.findFirst({
+    where: { userId: input.userId, tenantId },
   });
 
   const purchaseHistory = await buildPurchaseHistorySummary(input.userId);
@@ -300,7 +305,7 @@ export async function extractAndUpdateCustomerMemory(
 
   const row = await prisma.customerMemory.upsert({
     where: { userId: input.userId },
-    create: { userId: input.userId, ...data },
+    create: { userId: input.userId, tenantId, ...data },
     update: data,
   });
 

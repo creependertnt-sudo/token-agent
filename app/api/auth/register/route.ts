@@ -5,6 +5,7 @@ import {
 } from "@/lib/constants";
 import { prisma } from "@/lib/db";
 import { avatarInitials, DEFAULT_NICKNAME } from "@/lib/user-profile";
+import { ensureDefaultTenant, DEFAULT_TENANT_ID } from "@/lib/tenant-context";
 import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
@@ -38,6 +39,7 @@ export async function POST(req: Request) {
 
     const nickname = DEFAULT_NICKNAME;
     const avatar = avatarInitials(nickname);
+    await ensureDefaultTenant();
 
     const user = await prisma.user.create({
       data: {
@@ -47,6 +49,7 @@ export async function POST(req: Request) {
         avatar,
         tokenBalance: INITIAL_TOKEN_BALANCE,
         freeChatCount: INITIAL_FREE_CHAT_COUNT,
+        tenantId: DEFAULT_TENANT_ID,
       },
       select: {
         id: true,
@@ -56,6 +59,7 @@ export async function POST(req: Request) {
         theme: true,
         tokenBalance: true,
         freeChatCount: true,
+        role: true,
       },
     });
 

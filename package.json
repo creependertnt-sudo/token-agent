@@ -8,14 +8,21 @@
     "start": "next start",
     "lint": "eslint",
     "db:seed": "npx tsx prisma/seed.ts",
+    "db:seed-agent": "npx tsx prisma/seed-agent.ts",
     "db:migrate": "npx prisma migrate dev",
-    "db:reset": "npx prisma migrate reset --force"
+    "db:deploy": "npx prisma migrate deploy",
+    "db:reset": "npx prisma migrate reset --force",
+    "db:export": "npx tsx scripts/export-sqlite.ts",
+    "db:import": "npx tsx scripts/import-postgres.ts",
+    "db:check": "npx tsx scripts/check-database.ts",
+    "verify:deploy": "npx tsx scripts/verify-deployment.ts"
   },
   "prisma": {
     "seed": "npx tsx prisma/seed.ts"
   },
   "dependencies": {
     "@prisma/adapter-better-sqlite3": "^7.8.0",
+    "@prisma/adapter-pg": "^7.8.0",
     "@prisma/client": "^7.8.0",
     "ai": "^7.0.31",
     "better-sqlite3": "^12.11.1",
@@ -23,6 +30,7 @@
     "next": "16.2.10",
     "next-themes": "^0.4.6",
     "openai": "^6.48.0",
+    "pg": "^8.23.0",
     "prisma": "^7.8.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
@@ -33,6 +41,7 @@
     "@tailwindcss/postcss": "^4",
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^20",
+    "@types/pg": "^8.23.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
