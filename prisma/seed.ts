@@ -207,7 +207,7 @@ A: 不会。扣费只跟你选择的通道有关。
 Q: 怎么购买？
 A: /recharge 选套餐支付；到账后在顶栏切换 LIGHT/STANDARD/PREMIUM。
 
-Q: 和其他 AI Token Agent 有什么区别？
+Q: 和其他 Mira AI Agent 有什么区别？
 A: 见竞品对比：分层模型、固定计费、自主切换、数据隔离、会话记忆、可扩展。`,
     keywords: "FAQ,常见,怎么,如何,问题,适合我,网站,收费吗,自动升级",
   },

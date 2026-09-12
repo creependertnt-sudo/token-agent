@@ -176,9 +176,7 @@ export default function SelectAIPage() {
 
         <div className={styles.hero}>
           <p className={styles.heroKicker}>MIRA AI</p>
-          <h1 className={styles.heroTitle}>
-            选择你的 <span className={styles.heroAccent}>AI 助手</span>
-          </h1>
+          <h1 className={styles.heroTitle}>Mira AI 模型选择</h1>
           <p className={styles.heroSubtitle}>
             Alpha / Beta / Gamma 对应不同能力档位；需要选型时可先选 Guide。
           </p>
@@ -199,9 +197,7 @@ export default function SelectAIPage() {
             const active = selectingId === service.id;
             const recommended = service.type === "STANDARD";
             const delay = delayClass[Math.min(index, delayClass.length - 1)];
-            const selectCta = active
-              ? "✔ 当前使用"
-              : `选择 ${view.label}`;
+            const selectCta = active ? "✔ 当前使用" : "立即使用";
             const tooltip = [view.label, view.hint, view.blurb]
               .filter(Boolean)
               .join(" · ");
@@ -225,7 +221,7 @@ export default function SelectAIPage() {
                     <div className={styles.cardGlow} aria-hidden />
 
                     {recommended && !active ? (
-                      <div className={styles.recommend}>推荐</div>
+                      <div className={styles.recommend}>推荐模型</div>
                     ) : null}
                     {active ? (
                       <div className={styles.selectedMark} aria-hidden>

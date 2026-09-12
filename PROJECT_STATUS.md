@@ -1,7 +1,7 @@
 # Mira AI — 项目状态
 
 > 更新日期：2026-08-18  
-> 仓库：https://github.com/creependertnt-sudo/token-agent  
+> 仓库：https://github.com/creependertnt-sudo/mira-ai  
 > 分支：`main`  
 > 当前提交：`2dbf3b0`（`feat: add agent observability system`）
 

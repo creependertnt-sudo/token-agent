@@ -109,6 +109,24 @@
   gap: 6px;
 }
 
+.headerBrand {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  line-height: 1.2;
+}
+
+.headerBrandName {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.headerBrandTagline {
+  font-size: 0.6875rem;
+  color: var(--muted);
+}
+
 .headerPlaceholder {
   margin: 0;
   font-size: 0.8rem;

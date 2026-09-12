@@ -15,8 +15,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Mira AI",
-  description:
-    "Mira AI 是一个支持多模型协作、长期记忆和实时语音交互的智能 Agent 客服平台。",
+  description: "多模型 AI 对话系统（Alpha / Beta / Gamma / Guide）",
 };
 
 export default function RootLayout({

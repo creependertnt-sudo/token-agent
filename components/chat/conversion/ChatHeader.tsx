@@ -109,6 +109,10 @@ export function ChatHeader({
         ) : null}
 
         <div className={styles.headerMeta}>
+          <div className={styles.headerBrand}>
+            <span className={styles.headerBrandName}>Mira AI</span>
+            <span className={styles.headerBrandTagline}>你的智能 AI 助手</span>
+          </div>
           {chatTitle || editing ? (
             editing ? (
               <input
