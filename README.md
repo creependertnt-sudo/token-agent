@@ -1,65 +1,70 @@
 # Token AI Agent
 
-基于 Next.js + Prisma + DeepSeek API 的 AI 客服系统。
+一个支持多模型（Alpha / Beta / Gamma）+ AI 客服（Guide）的对话系统。
 
-## 功能
+## ✨ Features
 
-- AI 客服（SALES 销售顾问）
-- Token 销售与套餐
-- 多模型角色（LIGHT / STANDARD / PREMIUM，即 A / B / C）
-- 用户系统（注册 / 登录）
-- 对话记录
-- Memory（长期记忆）
+- 多模型切换（Alpha / Beta / Gamma / Guide）
+- AI 客服推荐系统（Guide）
+- 动态 Starter + 推进链
+- 语音输入 / TTS 播报
+- 本地会话管理（Sidebar）
 
-## 技术栈
+## 🛠 Tech Stack
 
-- Next.js
+- Next.js 16
 - TypeScript
-- Prisma
-- SQLite
-- DeepSeek API
+- Tailwind CSS
+- Prisma + SQLite
+- DeepSeek API（OpenAI SDK 兼容）
 
-## 运行步骤
-
-1. 安装依赖：
+## 🚀 Getting Started
 
 ```bash
 npm install
-```
-
-2. 配置环境变量：复制 `.env.example` 为 `.env`，填入真实密钥（**不要提交 `.env`**）。
-
-```bash
-# Windows PowerShell
-Copy-Item .env.example .env
-```
-
-至少需要设置：
-
-- `OPENAI_API_KEY` — DeepSeek（或兼容）API Key
-- `SESSION_SECRET` — 生产环境请使用强随机字符串
-
-3. 初始化数据库并（可选）写入种子数据：
-
-```bash
 npx prisma migrate deploy
 npm run db:seed
-```
-
-4. 启动开发服务：
-
-```bash
 npm run dev
 ```
 
+创建 `.env.local`（或复制 `.env.example`）：
+
+```bash
+# Windows PowerShell
+Copy-Item .env.example .env.local
+```
+
+至少填入：
+
+```env
+OPENAI_API_KEY=your_key_here
+SESSION_SECRET=your_random_secret_here
+```
+
+语音功能（可选）还需配置 `VOLC_APP_ID` 与 `VOLC_API_KEY`，**切勿写入仓库**。
+
 打开 [http://localhost:3000](http://localhost:3000)。
 
-## 安全说明
+## 📦 项目结构
 
-以下内容已通过 `.gitignore` 排除，请勿强制加入版本库：
+```
+/app/chat          聊天核心
+/components/chat   UI 组件
+/lib               业务逻辑（chain / voice / stream）
+```
 
-- `.env`（API Key、会话密钥）
-- `*.db` / `data.db` / `dev.db`（含用户、聊天、订单等隐私数据）
-- `node_modules`、`.next`
+## 🔒 安全说明
 
-请使用 `.env.example` 作为配置模板，仅使用占位符，不要写入真实密钥。
+以下内容已通过 `.gitignore` 排除，**请勿提交**：
+
+| 文件 | 说明 |
+|------|------|
+| `.env` / `.env.local` | API Key、会话密钥 |
+| `*.db` / `data.db` | SQLite 本地数据（含用户与对话） |
+| `node_modules` / `.next` | 依赖与构建产物 |
+
+请仅使用 `.env.example` 作为配置模板，保留 key、不填真实值。
+
+## 📌 状态
+
+当前版本：**v1.0**（已可用）

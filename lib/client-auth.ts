@@ -43,6 +43,11 @@ export function clearAuthSession() {
 
 export function updateStoredUser(user: AuthUser) {
   localStorage.setItem(USER_KEY, JSON.stringify(user));
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(
+      new CustomEvent("mira-auth-user", { detail: user }),
+    );
+  }
 }
 
 /** 带 Authorization 的请求，用于读写受保护接口 */

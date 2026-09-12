@@ -144,7 +144,7 @@ export function MessageBubble({
         header={
           <div className="assistant-header-stack">
             <div className="assistant-header-top">
-              <span className="msg-name">Token AI客服</span>
+              <span className="msg-name">Mira AI</span>
               <span className="msg-time">{time}</span>
             </div>
             {/* Token 扣费不进 Header，只在底部状态栏 */}
@@ -196,6 +196,15 @@ export function MessageBubble({
                 components={{
                   pre: ({ children }) => <>{children}</>,
                   code: MarkdownCode,
+                  a: ({ href, children }) => (
+                    <a
+                      href={href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {children}
+                    </a>
+                  ),
                   table: ({ children }) => (
                     <div className="md-table-scroll">
                       <table>{children}</table>

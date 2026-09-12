@@ -1,8 +1,15 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { SERVICE_DISPLAY_NAME, SERVICE_TOKEN_COST } from "@/lib/constants";
-import { formatMessageModelLine } from "@/lib/message-snapshot";
+import {
+  getServiceUiHint,
+  getServiceUiLabel,
+  MODEL_LABEL,
+  SERVICE_TOKEN_COST,
+  SERVICE_UI_HINT,
+  SERVICE_UI_TONE,
+  type ChatServiceType,
+} from "@/lib/constants";
 
 export type ModelServiceOption = {
   id: string;
@@ -31,13 +38,6 @@ function costLabel(type: string, cost: number) {
   return `${locked} Token`;
 }
 
-function displayName(type: string, fallback: string) {
-  if (type in SERVICE_DISPLAY_NAME) {
-    return SERVICE_DISPLAY_NAME[type as keyof typeof SERVICE_DISPLAY_NAME];
-  }
-  return fallback;
-}
-
 export function ModelSelector({
   services,
   value,
@@ -54,37 +54,54 @@ export function ModelSelector({
   const current = ordered.find((s) => s.id === value);
   const type = activeType ?? current?.type ?? null;
   const currentLine = type
-    ? formatMessageModelLine(type, displayName(type, current?.name ?? ""))
+    ? `${getServiceUiLabel(type, current?.name ?? "")} · ${getServiceUiHint(type)} · ${costLabel(type, current?.tokenCost ?? 0)}`
     : "未选择";
 
   return (
     <div className="flex min-w-0 flex-col gap-2.5">
       <p className="text-xs text-muted">
-        当前模型：
+        当前：
         <span className="ml-1 font-medium text-foreground">{currentLine}</span>
       </p>
 
       <div className="flex flex-wrap gap-2">
         {ordered.map((svc) => {
           const active = svc.id === value;
+          const svcType = svc.type as ChatServiceType;
+          const label =
+            svc.type in MODEL_LABEL ? MODEL_LABEL[svcType] : svc.name;
+          const hint =
+            svc.type in SERVICE_UI_HINT ? SERVICE_UI_HINT[svcType] : "";
+          const tone =
+            svc.type in SERVICE_UI_TONE ? SERVICE_UI_TONE[svcType] : "guide";
           return (
             <motion.button
               key={svc.id}
               type="button"
               whileTap={{ scale: 0.97 }}
               disabled={disabled}
-              title={svc.description ?? svc.name}
+              data-tone={tone}
+              title={svc.description ?? `${label} · ${hint}`}
               onClick={() => onChange(svc.id)}
               className={`min-w-[5.5rem] rounded-xl border px-3 py-2 text-left transition disabled:opacity-50 ${
                 active
-                  ? "border-accent/50 bg-accent/15 text-accent shadow-[0_0_0_1px_rgba(45,212,191,0.12)]"
+                  ? tone === "alpha"
+                    ? "border-sky-400/50 bg-sky-500/15 text-sky-400"
+                    : tone === "beta"
+                      ? "border-accent/50 bg-accent/15 text-accent"
+                      : tone === "gamma"
+                        ? "border-violet-400/50 bg-violet-500/15 text-violet-400"
+                        : "border-slate-400/45 bg-slate-500/15 text-slate-400"
                   : "border-panel-border bg-card text-muted hover:border-accent/30 hover:text-foreground"
               }`}
             >
               <span className="block text-xs font-semibold leading-tight">
-                {svc.type}
+                {label}
               </span>
-              <span className="mt-0.5 block text-[10px] opacity-85">
+              <span className="mt-0.5 block text-[10px] opacity-80">
+                {hint}
+              </span>
+              <span className="mt-0.5 block text-[10px] opacity-70">
                 {costLabel(svc.type, svc.tokenCost)}
               </span>
             </motion.button>

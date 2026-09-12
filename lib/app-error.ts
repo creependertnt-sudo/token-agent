@@ -45,14 +45,17 @@ export function errorResponse(error: unknown) {
     "status" in error &&
     "message" in error
   ) {
-    const status = Number((error as { status?: number }).status) || 500;
+    const err = error as {
+      status?: unknown;
+      message?: unknown;
+      code?: unknown;
+    };
+    const status = Number(err.status) || 500;
     const message =
-      typeof (error as { message?: unknown }).message === "string"
-        ? (error as { message: string }).message
-        : "服务暂时不可用";
+      typeof err.message === "string" ? err.message : "服务暂时不可用";
     const code =
-      typeof (error as { code?: unknown }).code === "string"
-        ? (error as { code: string }).code
+      typeof err.code === "string"
+        ? err.code
         : status === 401
           ? "UNAUTHORIZED"
           : status === 403

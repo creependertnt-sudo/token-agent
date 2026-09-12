@@ -3,10 +3,15 @@
 import Link from "next/link";
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
 import { saveAuthSession } from "@/lib/client-auth";
 import type { AuthUser } from "@/components/chat/types";
+import { PasswordField } from "@/components/auth/PasswordField";
+import { PasswordStrength } from "@/components/auth/PasswordStrength";
+import enter from "@/components/auth/auth-enter.module.css";
+import { AmbientBackground } from "@/components/ui/AmbientBackground";
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
+import { friendlyAuthError, isValidEmailFormat } from "@/lib/auth-form";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -18,7 +23,19 @@ export default function RegisterPage() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (isLoading) return;
     setError(null);
+
+    if (!email.trim() || !password) {
+      setError("请填写邮箱和密码");
+      return;
+    }
+
+    if (!isValidEmailFormat(email)) {
+      setError("请输入正确邮箱地址");
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -46,7 +63,9 @@ export default function RegisterPage() {
       saveAuthSession(data.token, data.user);
       router.replace("/select-ai");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "注册失败");
+      setError(
+        friendlyAuthError(err instanceof Error ? err.message : "注册失败"),
+      );
     } finally {
       setIsLoading(false);
     }
@@ -54,54 +73,72 @@ export default function RegisterPage() {
 
   if (authLoading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-background text-sm text-muted">
-        正在检查登录状态...
+      <div className="relative flex h-screen items-center justify-center overflow-hidden bg-background text-sm text-muted">
+        <AmbientBackground />
+        <span className="relative">正在检查登录状态...</span>
       </div>
     );
   }
 
   return (
-    <div className="relative flex h-screen flex-col items-center justify-center overflow-y-auto bg-background px-4">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_80%_10%,rgba(56,189,248,0.12),transparent_35%)]" />
-      <motion.div
-        initial={{ opacity: 0, y: 14 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="relative w-full max-w-md rounded-3xl border border-panel-border bg-panel p-8 shadow-2xl"
+    <div className="relative flex h-screen flex-col items-center justify-center overflow-x-hidden overflow-y-auto bg-background px-4">
+      <AmbientBackground />
+      <div className="absolute top-4 right-4 z-20 sm:top-6 sm:right-6">
+        <ThemeToggle />
+      </div>
+      <div
+        className={`${enter.card} theme-surface relative w-full max-w-md rounded-3xl border p-8`}
       >
-        <p className="text-[11px] tracking-[0.18em] text-accent uppercase">
-          Get started
-        </p>
-        <h1 className="mt-2 text-2xl font-semibold text-foreground">注册</h1>
-        <p className="mt-2 text-sm text-muted">
-          注册后即可免费咨询，购买 Token 解锁高级功能
-        </p>
+        <div className={enter.header}>
+          <p className="text-[11px] tracking-[0.18em] text-accent uppercase">
+            Get started
+          </p>
+          <h1 className="mt-2 text-2xl font-semibold text-foreground">注册</h1>
+          <p className="mt-2 text-sm text-muted">
+            注册后即可免费咨询，购买 Token 解锁高级功能
+          </p>
+        </div>
 
-        <form onSubmit={handleSubmit} className="mt-8 space-y-4">
+        <form onSubmit={handleSubmit} noValidate className={`${enter.form} mt-8 space-y-4`}>
           <div>
-            <label className="mb-2 block text-sm text-muted">邮箱</label>
+            <label
+              htmlFor="register-email"
+              className="mb-2 block text-sm text-muted"
+            >
+              邮箱
+            </label>
             <input
+              id="register-email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-xl border border-panel-border bg-card px-4 py-3 text-sm text-foreground outline-none focus:border-accent/50"
+              disabled={isLoading}
+              className="w-full rounded-xl border border-panel-border bg-card px-4 py-3 text-sm text-foreground outline-none transition-colors focus:border-accent/50"
               required
             />
           </div>
 
           <div>
-            <label className="mb-2 block text-sm text-muted">密码</label>
-            <input
-              type="password"
+            <label
+              htmlFor="register-password"
+              className="mb-2 block text-sm text-muted"
+            >
+              密码
+            </label>
+            <PasswordField
+              id="register-password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              minLength={6}
-              className="w-full rounded-xl border border-panel-border bg-card px-4 py-3 text-sm text-foreground outline-none focus:border-accent/50"
-              required
+              onChange={setPassword}
+              disabled={isLoading}
+              autoComplete="new-password"
             />
+            <div className="mt-3">
+              <PasswordStrength password={password} />
+            </div>
           </div>
 
           {error && (
-            <p className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-2 text-sm text-red-300">
+            <p className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-2 text-sm text-red-500 dark:text-red-300">
               {error}
             </p>
           )}
@@ -109,7 +146,8 @@ export default function RegisterPage() {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full rounded-xl bg-accent py-3 text-sm font-semibold text-[#042f2e] disabled:opacity-50"
+            aria-busy={isLoading}
+            className="w-full rounded-xl bg-accent py-3 text-sm font-semibold text-[#042f2e] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isLoading ? "注册中..." : "注册"}
           </button>
@@ -121,7 +159,7 @@ export default function RegisterPage() {
             去登录
           </Link>
         </p>
-      </motion.div>
+      </div>
     </div>
   );
 }

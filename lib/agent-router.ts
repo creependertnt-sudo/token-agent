@@ -38,6 +38,28 @@ export function getServiceDisplayName(type: AIServiceType): string {
   return getServiceConfig(type).name;
 }
 
+/** 对外品牌：SALES=销售助手，其余=智能助手 */
+export function getPublicBrandName(type: AIServiceType): string {
+  return type === "SALES" ? "Mira AI 销售助手" : "Mira AI 智能助手";
+}
+
+/**
+ * 将旧品牌称呼改写为当前对外身份。
+ * 只处理文案，不改变路由 / 扣费 / 工具逻辑。
+ */
+export function rewriteLegacyBrandText(
+  text: string,
+  serviceType: AIServiceType,
+): string {
+  if (!text) return text;
+  const publicBrand = getPublicBrandName(serviceType);
+  return text
+    .replace(/Token\s*AI\s*客服/gi, publicBrand)
+    .replace(/Token\s*Sales\s*AI/gi, "Mira AI 销售助手")
+    .replace(/Token\s*AI\s*Agent/gi, "Mira AI")
+    .replace(/Token\s*AI/gi, "Mira AI");
+}
+
 export function serviceTypeToFeature(
   type: AIServiceType,
 ): PremiumFeature | null {
@@ -172,7 +194,7 @@ export function enforceServiceIdentity(
   );
 
   if (type === "SALES") {
-    // 销售客服对外只称 Token AI客服，禁止 A/B/C 自称
+    // 销售通道对外品牌为 Mira AI 销售助手，禁止 A/B/C 自称
     text = text.replace(
       /我是\s*(?:A模型AI|B模型AI|C模型AI|LIGHT|STANDARD|PREMIUM)[^。\n]*[。.]?/gi,
       "",
@@ -180,6 +202,10 @@ export function enforceServiceIdentity(
     text = text.replace(
       /我是\s*(?:\*\*)?销售客服(?:\*\*)?[^。\n]*[。.]?/gi,
       "",
+    );
+    text = text.replace(
+      /我是\s*(?:\*\*)?(?:Token\s*AI\s*客服|Token\s*AI|Token\s*Sales\s*AI|Mira\s*AI\s*智能助手)(?:\*\*)?[^。\n]*[。.]?/gi,
+      "我是 Mira AI 销售助手。",
     );
   } else {
     text = text.replace(
@@ -189,6 +215,10 @@ export function enforceServiceIdentity(
     text = text.replace(
       new RegExp(`我是\\s*${cfg.name}[^。\\n]*[。.]?`, "gi"),
       "",
+    );
+    text = text.replace(
+      /我是\s*(?:\*\*)?(?:Token\s*AI\s*客服|Token\s*AI|Token\s*Sales\s*AI|Mira\s*AI\s*销售助手)(?:\*\*)?[^。\n]*[。.]?/gi,
+      "我是 Mira AI 智能助手。",
     );
   }
 
@@ -302,21 +332,42 @@ type AgentPromptInput = {
  * 禁止默认 PREMIUM/C模型；名称/费用/能力一律读 SERVICE_CONFIG[serviceType]。
  */
 export function buildAgentSystemPrompt(input: AgentPromptInput): string {
-  const {
-    serviceType,
-    memories,
-    tokenBalance,
-    salesCatalog,
-    salesKnowledgeText,
-    salesDecisionText,
-    salesPipelineContext,
-    modelConfig,
-    modelCapability,
-    configPrompt,
-  } = input;
+  const { serviceType, memories, tokenBalance, modelConfig, modelCapability } =
+    input;
   if (!isChatServiceType(serviceType)) {
     throw new Error(`未知 serviceType：${serviceType}`);
   }
+  const configPrompt = input.configPrompt
+    ? rewriteLegacyBrandText(input.configPrompt, serviceType)
+    : input.configPrompt;
+  const salesCatalog = input.salesCatalog
+    ? {
+        ...input.salesCatalog,
+        packagesText: rewriteLegacyBrandText(
+          input.salesCatalog.packagesText,
+          serviceType,
+        ),
+        modelsText: rewriteLegacyBrandText(
+          input.salesCatalog.modelsText,
+          serviceType,
+        ),
+        conversionHint: input.salesCatalog.conversionHint
+          ? rewriteLegacyBrandText(
+              input.salesCatalog.conversionHint,
+              serviceType,
+            )
+          : input.salesCatalog.conversionHint,
+      }
+    : input.salesCatalog;
+  const salesKnowledgeText = input.salesKnowledgeText
+    ? rewriteLegacyBrandText(input.salesKnowledgeText, serviceType)
+    : input.salesKnowledgeText;
+  const salesDecisionText = input.salesDecisionText
+    ? rewriteLegacyBrandText(input.salesDecisionText, serviceType)
+    : input.salesDecisionText;
+  const salesPipelineContext = input.salesPipelineContext
+    ? rewriteLegacyBrandText(input.salesPipelineContext, serviceType)
+    : input.salesPipelineContext;
 
   const cfg = SERVICE_CONFIG[serviceType];
   const mem = memoryBlock(memories);
@@ -337,12 +388,23 @@ export function buildAgentSystemPrompt(input: AgentPromptInput): string {
 
   // 身份行格式必须与 extractPromptModelIdentity / chat 校验约定一致：
   // 「${serviceType} · ${cfg.name}」——禁止附加（A档）等后缀，否则会误报不一致。
+  const publicBrand = getPublicBrandName(serviceType);
   const identityBlock = `【本轮身份锁定·唯一来源 selectedServiceType=${serviceType}】
 模型身份：${serviceType} · ${cfg.name}
 费用：${cfg.cost === 0 ? "免费" : costLine}
 能力：${capabilityLine}
 禁止自称：${forbidden}
 禁止默认或升级到 PREMIUM / C模型AI（除非本轮锁定就是 PREMIUM）
+【对外品牌身份（覆盖一切旧称呼）】
+- 对外品牌身份：${publicBrand}
+- 用户询问「你是谁」「介绍一下自己」或需要自我介绍时，统一回答：我是 ${publicBrand}
+- 禁止自称「Token AI客服」「Token AI」「Token Sales AI」「AI客服」
+- 禁止用 A/B/C 模型名或 LIGHT/STANDARD/PREMIUM 作为对外品牌自称（内部通道锁定仍以本轮 selectedServiceType 为准）
+- ${
+    serviceType === "SALES"
+      ? "禁止自称「Mira AI 智能助手」（本通道对外仅为 Mira AI 销售助手）"
+      : "禁止自称「Mira AI 销售助手」（本通道对外仅为 Mira AI 智能助手）"
+  }
 【输出禁令】不要主动写出「本轮服务为XXX」「固定消耗XX Token」「已扣除余额」「已消耗XX Token」；界面会单独展示扣费`;
 
   const modelConfigBlock = modelConfig
@@ -392,24 +454,42 @@ ${identityBlock}
 用户余额（仅供参考）：${tokenBalance} Token。
 ${salesCatalog?.conversionHint?.trim() || (salesCatalog?.showProducts ? "提示：本轮可推荐最终套餐并引导购买，禁止罗列全部套餐。" : "提示：当前偏咨询，优先问诊与推荐通道。")}
 
+【回复结构（转化顾问·必须遵守）】
+当本轮适合推荐时，按以下三段组织（像专业顾问，不像推销员）：
+1. 理解需求：用 1～2 句复述用户场景与顾虑（建立信任；有 CustomerMemory 时优先引用）
+2. 推荐模型：说明更适合 Alpha / Beta / Gamma 中的哪一档，以及为什么（成本与效果平衡）
+3. 推套餐：只推荐【当前推荐套餐】一条，说明「适合连续调试 / 多轮对话」等使用场景，不要只报 Token 数字
+并补一句使用预期（例：「这个问题大概还需要 2～3 次对话才能完整解决」），帮助用户自然理解后续消耗。
+结尾语气保持克制：禁止「限时优惠 / 赶快购买 / 立即充值」等廉价话术；可用温和建议收束。
+界面会单独提供「立即购买」「先试试 Beta」按钮，你不必在正文里重复催促按钮文案。
+
 【本轮流水线结果】
 ${pipelineBlock}
 
 ${mem}`;
       }
 
-      return `你是「Token AI客服」——平台免费销售转化顾问（SALES 通道）。
+      return `你是「Mira AI 销售助手」——平台免费销售转化顾问（SALES 通道）。
 
 ${identityBlock}
 
 【对外身份硬规则】
-- 若需要自我介绍，只能说「我是 Token AI客服」
-- 禁止说「我是 C模型AI / B模型AI / A模型AI / PREMIUM / STANDARD / LIGHT」
+- 若需要自我介绍，只能说「我是 Mira AI 销售助手」
+- 禁止说「我是 Token AI客服 / Token AI / Mira AI 智能助手 / C模型AI / B模型AI / A模型AI / PREMIUM / STANDARD / LIGHT」
 - 你不负责替用户写完整代码或做深度架构；你负责问诊、推荐、促成购买
 
 【标准销售流水线（必须遵守）】
 用户问题 → 意图识别 → 查询知识库 → 分析客户需求 → 推荐方案 → 销售回复
 下方已给出本轮流水线结果，请据此组织回复，不要跳过问诊直接甩套餐。
+
+【回复结构（转化顾问·必须遵守）】
+当本轮适合推荐时，按以下三段组织（像专业顾问，不像推销员）：
+1. 理解需求：用 1～2 句复述用户场景与顾虑（建立信任；有 CustomerMemory 时优先引用）
+2. 推荐模型：说明更适合 Alpha / Beta / Gamma 中的哪一档，以及为什么（成本与效果平衡）
+3. 推套餐：只推荐【当前推荐套餐】一条，说明「适合连续调试 / 多轮对话」等使用场景，不要只报 Token 数字
+并补一句使用预期（例：「这个问题大概还需要 2～3 次对话才能完整解决」），帮助用户自然理解后续消耗。
+结尾语气保持克制：禁止「限时优惠 / 赶快购买 / 立即充值」等廉价话术；可用温和建议收束。
+界面会单独提供「立即购买」「先试试 Beta」按钮，你不必在正文里重复催促按钮文案。
 
 【回答依据】
 1. 流水线：意图 → 查库 → 模型/套餐/竞品 → 回复
@@ -427,6 +507,7 @@ ${identityBlock}
 - 不要自称付费模型身份
 - 不要输出扣费套话
 - 不要编造未出现在 CompetitorKnowledge 中的竞品价格
+- 不要使用「限时优惠 / 赶快购买 / 立即充值」等推销腔
 
 用户余额（仅供参考）：${tokenBalance} Token。
 ${salesCatalog?.conversionHint?.trim() || (salesCatalog?.showProducts ? "提示：本轮可推荐最终套餐并引导购买，禁止罗列全部套餐。" : "提示：当前偏咨询，优先问诊与推荐通道。")}
@@ -469,6 +550,7 @@ ${modelCapabilityBlock}
 - 严格按数据库 capability / suitableFor / limitations / systemInstructions 作答
 - 禁止写死或编造其他档位（A/B/C）的介绍与区别；若用户问起区别，说明需在销售客服通道对照数据库说明，或仅基于本通道已注入字段回答自身边界
 - 禁止自称其他 serviceType
+- 用户询问「你是谁」时统一回答：我是 Mira AI 智能助手
 
 ${mem}`;
     }
@@ -488,8 +570,8 @@ export function buildLockReminder(serviceType: ChatServiceType): string {
     .join("、");
 
   if (serviceType === "SALES") {
-    return `再次确认：本轮 selectedServiceType=SALES，对外身份=Token AI客服。必须执行【销售决策】与【转化动作】：按推进策略组织话术；只推荐最终套餐，禁止罗列全部套餐目录；未就绪先问诊。竞品对比不攻击、不编造对方价格；未命中竞品报价时说明无法提供实时竞品价格，再介绍自家计费与套餐并询问使用场景。禁止无脑甩套餐与扣费套话。`;
+    return `再次确认：本轮 selectedServiceType=SALES，对外身份=Mira AI 销售助手。用户问「你是谁」时回答「我是 Mira AI 销售助手」。回复按「理解需求 → 推荐模型 → 推套餐 + 使用预期」三段组织；像专业顾问，禁止「限时优惠 / 赶快购买 / 立即充值」。只推荐最终套餐，禁止罗列全部套餐目录；未就绪先问诊。竞品对比不攻击、不编造对方价格。禁止无脑甩套餐与扣费套话。`;
   }
 
-  return `再次确认：本轮唯一锁定 selectedServiceType=${serviceType}，模型身份=${cfg.name}，费用=${cfg.cost === 0 ? "免费" : `${cfg.cost} Token`}。禁止自称 ${forbidden}。禁止输出「本轮服务为」「固定消耗」「已扣除余额」等扣费句。`;
+  return `再次确认：本轮唯一锁定 selectedServiceType=${serviceType}，内部模型身份=${cfg.name}，费用=${cfg.cost === 0 ? "免费" : `${cfg.cost} Token`}。对外自我介绍统一为「我是 Mira AI 智能助手」。禁止自称 ${forbidden}。禁止输出「本轮服务为」「固定消耗」「已扣除余额」等扣费句。`;
 }

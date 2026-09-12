@@ -1,0 +1,76 @@
+/* Segmented 主题切换：滑块选中态，无 fancy 动画 */
+
+.themeSwitch {
+  position: relative;
+  display: inline-flex;
+  align-items: stretch;
+  padding: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.themeSwitch button {
+  position: relative;
+  z-index: 2;
+  flex: 1 1 50%;
+  min-width: 4.75rem;
+  padding: 6px 14px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  font-size: 12px;
+  line-height: 1.2;
+  color: rgba(255, 255, 255, 0.55);
+  cursor: pointer;
+  transition: color 120ms ease;
+}
+
+.themeSwitch button:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.themeSwitch button[data-active="true"] {
+  color: #fff;
+}
+
+.indicator {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  z-index: 1;
+  width: calc(50% - 4px);
+  height: calc(100% - 8px);
+  border-radius: 999px;
+  background: rgba(45, 212, 191, 0.15);
+  border: 1px solid rgba(45, 212, 191, 0.4);
+  pointer-events: none;
+  transition: transform 160ms ease-out;
+  will-change: transform;
+}
+
+:global(.light) .themeSwitch {
+  background: rgba(15, 23, 42, 0.06);
+  border-color: rgba(15, 23, 42, 0.08);
+}
+
+:global(.light) .themeSwitch button {
+  color: rgba(15, 23, 42, 0.5);
+}
+
+:global(.light) .themeSwitch button[data-active="true"] {
+  color: #0f172a;
+}
+
+:global(.light) .indicator {
+  background: rgba(45, 212, 191, 0.18);
+  border-color: rgba(13, 148, 136, 0.45);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .themeSwitch button,
+  .indicator {
+    transition: none;
+  }
+}

@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { SERVICE_CONFIG, type ChatServiceType } from "@/lib/constants";
+import { getServiceUiLabel } from "@/lib/constants";
 import { ChatAvatar, MessageItem } from "./ChatMessage";
 
 type Props = {
@@ -12,10 +12,9 @@ type Props = {
 export function TypingIndicator({ serviceType, modelName }: Props) {
   const type = serviceType?.trim() || null;
   const name =
+    getServiceUiLabel(type, "") ||
     modelName?.trim() ||
-    (type && type in SERVICE_CONFIG
-      ? SERVICE_CONFIG[type as ChatServiceType].name
-      : null);
+    null;
 
   return (
     <motion.div
@@ -31,13 +30,13 @@ export function TypingIndicator({ serviceType, modelName }: Props) {
         header={
           <div className="assistant-header-stack">
             <div className="assistant-header-top">
-              <span className="msg-name">Token AI客服</span>
+              <span className="msg-name">Mira AI</span>
             </div>
-            <div className="assistant-header-meta">
-              <span className="msg-chip">DeepSeek</span>
-              {type ? <span className="msg-chip">{type}</span> : null}
-              {name ? <span className="msg-chip">{name}</span> : null}
-            </div>
+            {name ? (
+              <div className="assistant-header-meta">
+                <span className="msg-chip">{name}</span>
+              </div>
+            ) : null}
           </div>
         }
       >

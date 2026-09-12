@@ -1,0 +1,80 @@
+.root {
+  contain: paint;
+  isolation: isolate;
+}
+
+.mesh {
+  position: absolute;
+  inset: -28%;
+  opacity: 0.08;
+  background-image:
+    radial-gradient(ellipse 70% 55% at 18% 22%, var(--ambient-mesh-1), transparent 58%),
+    radial-gradient(ellipse 60% 50% at 82% 12%, var(--ambient-mesh-2), transparent 54%),
+    radial-gradient(ellipse 55% 65% at 78% 78%, var(--ambient-mesh-3), transparent 58%),
+    radial-gradient(ellipse 50% 45% at 12% 72%, var(--ambient-mesh-4), transparent 52%),
+    var(--ambient-mesh-base);
+  background-repeat: no-repeat;
+  transition: opacity 300ms ease;
+  animation: none !important;
+}
+
+/* mount 后一次轻微提亮 — 非持续动画 */
+.active .mesh {
+  opacity: 0.12;
+}
+
+/* 深度遮罩：mesh 之上、内容之下 */
+.backgroundOverlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+:global(.dark) .backgroundOverlay,
+:global(html:not(.light)) .backgroundOverlay {
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.25),
+    rgba(0, 0, 0, 0.4)
+  );
+}
+
+:global(.light) .backgroundOverlay {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.4),
+    rgba(255, 255, 255, 0.6)
+  );
+}
+
+.noise {
+  position: absolute;
+  inset: 0;
+  opacity: 0.025;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  pointer-events: none;
+}
+
+:global(.dark) .noise {
+  opacity: 0.03;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mesh {
+    transition: none;
+  }
+
+  .active .mesh {
+    opacity: 0.08;
+  }
+}
+
+/* 兼容旧引用：orb 不渲染 */
+.orb,
+.a,
+.b,
+.c,
+.blob,
+.blobA {
+  display: none;
+}

@@ -1,0 +1,32 @@
+/* 交互要快，而不是优雅 — 进入动画一次性、≤160ms */
+
+@keyframes auth-enter {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 10px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.card {
+  animation: auth-enter 160ms ease-out both;
+}
+
+.header {
+  animation: auth-enter 140ms ease-out 30ms both;
+}
+
+.form {
+  animation: auth-enter 140ms ease-out 60ms both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card,
+  .header,
+  .form {
+    animation: none;
+  }
+}

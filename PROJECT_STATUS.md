@@ -1,4 +1,4 @@
-# Token AI Agent — 项目状态
+# Mira AI — 项目状态
 
 > 更新日期：2026-08-18  
 > 仓库：https://github.com/creependertnt-sudo/token-agent  

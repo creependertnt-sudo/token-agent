@@ -1,0 +1,13 @@
+B 性能补丁落地摘要（fix/stream-escape-and-safe-render）
+
+B-1 动画：禁止 transition:all；交互只用 transform/opacity（+ 非布局的 color/bg/border）
+B-2 已移除全部 backdrop-filter / -webkit-backdrop-filter，改用实色 rgba
+B-3 createThrottledUpdater(100ms) + 短 delta(<3) 攒字再 schedule；applyDone 一次落盘
+B-4 streaming 仅 StreamSafeContent 纯文本/pre，ChatMarkdown 仅 done
+B-5 stickToBottom 节流 100ms + scrollTop 直写；置顶 scrollIntoView behavior:auto
+B-6 Message memo + patchAssistant 只换最后一条引用
+B-7 ThinkingBar 仅 start/end，文案只在 start 抽一次（无 setInterval）
+B-8 :active scale(0.96)；发送钮 scale(0.98) 80ms
+B-9 .message / .cardInner / .sidebar translateZ(0)；sidebar will-change:transform
+
+验收：录 Chrome Performance → docs/stream-diag/perf-after-escape-<iso>.json

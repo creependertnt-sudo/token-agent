@@ -23,7 +23,7 @@ export const knowledgeTool: AgentTool = {
     required: ["query"],
     additionalProperties: false,
   },
-  async execute(args) {
+  async execute(args, ctx) {
     const query = asQuery(args);
     if (!query) {
       return { error: "query_required" };

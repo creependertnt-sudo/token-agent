@@ -19,6 +19,8 @@ export class TokenNotEnoughError extends Error {
   constructor(required = 0, balance = 0, message = "AI服务额度不足，请购买Token套餐") {
     super(message);
     this.name = "TokenNotEnoughError";
+    this.required = required;
+    this.balance = balance;
   }
 }
 

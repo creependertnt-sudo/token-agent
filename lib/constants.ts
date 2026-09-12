@@ -5,32 +5,83 @@ export const SESSION_COOKIE_NAME = "token_agent_session";
 /**
  * 全站唯一服务配置来源。
  * prompt / 扣费 / 展示名称必须全部读这里，禁止写死 PREMIUM 等默认身份。
+ * 用户可见名称请用 MODEL_LABEL / SERVICE_UI_LABEL，勿再写 A/B/C。
  */
 export const SERVICE_CONFIG = {
   SALES: {
-    name: "销售客服",
+    name: "Guide",
     cost: 0,
     capability: "销售转化顾问：了解需求、推荐模型、指导购买",
   },
   LIGHT: {
-    name: "A模型AI",
+    name: "Alpha",
     cost: 5,
     /** 展示/计费用短标签；完整能力以 ModelConfig/ModelCapability 为准 */
     capability: "见数据库 ModelConfig（LIGHT）",
   },
   STANDARD: {
-    name: "B模型AI",
+    name: "Beta",
     cost: 20,
     capability: "见数据库 ModelConfig（STANDARD）",
   },
   PREMIUM: {
-    name: "C模型AI",
+    name: "Gamma",
     cost: 50,
     capability: "见数据库 ModelConfig（PREMIUM）",
   },
 } as const;
 
 export type ChatServiceType = keyof typeof SERVICE_CONFIG;
+
+/**
+ * 用户可见模型名（内部枚举仍为 LIGHT / STANDARD / PREMIUM / SALES）。
+ * UI 一律：MODEL_LABEL[serviceType]
+ */
+export const MODEL_LABEL: Record<ChatServiceType, string> = {
+  LIGHT: "Alpha",
+  STANDARD: "Beta",
+  PREMIUM: "Gamma",
+  SALES: "Guide",
+};
+
+/** @deprecated 请用 MODEL_LABEL；保留别名避免旧引用漏改 */
+export const SERVICE_UI_LABEL = MODEL_LABEL;
+
+/** 模型名下的弱提示 */
+export const SERVICE_UI_HINT: Record<ChatServiceType, string> = {
+  LIGHT: "快速响应",
+  STANDARD: "均衡推荐",
+  PREMIUM: "高性能处理",
+  SALES: "智能推荐",
+};
+
+/** UI 色调标识（样式 data-tone） */
+export const SERVICE_UI_TONE: Record<ChatServiceType, string> = {
+  LIGHT: "alpha",
+  STANDARD: "beta",
+  PREMIUM: "gamma",
+  SALES: "guide",
+};
+
+export function getServiceUiLabel(
+  type: string | null | undefined,
+  fallback = "—",
+): string {
+  if (type && type in MODEL_LABEL) {
+    return MODEL_LABEL[type as ChatServiceType];
+  }
+  return fallback;
+}
+
+export function getServiceUiHint(
+  type: string | null | undefined,
+  fallback = "",
+): string {
+  if (type && type in SERVICE_UI_HINT) {
+    return SERVICE_UI_HINT[type as ChatServiceType];
+  }
+  return fallback;
+}
 
 /** @deprecated 请用 SERVICE_CONFIG[type].cost */
 export const SERVICE_TOKEN_COST = {
@@ -69,13 +120,17 @@ export const FEATURE_TOKEN_COST = {
 
 export type PremiumFeature = keyof typeof FEATURE_TOKEN_COST;
 
-export const WELCOME_MESSAGE = `你好，我是 Token AI 客服。
+/** 空状态主文案（结构渲染见 MessageList） */
+export const WELCOME_PRIMARY =
+  "从一个问题开始，我可以帮你逐步完成一个项目";
+export const WELCOME_SECONDARY = "你可以从这些开始 👇";
 
-我可以帮助你：
+/** @deprecated 兼容旧引用；UI 请用 WELCOME_PRIMARY / WELCOME_SECONDARY */
+export const WELCOME_MESSAGE = `${WELCOME_PRIMARY}\n${WELCOME_SECONDARY}`;
 
-- 查询 Token 套餐与价格（实时数据库）
-- 介绍可售 AI 模型与厂商
-- 推荐购买方案
-- 在顶栏切换 SALES / LIGHT / STANDARD / PREMIUM 通道
-
-扣费以你选择的通道为准（LIGHT=5 / STANDARD=20 / PREMIUM=50 / SALES=免费），不会因问题复杂而自动升级。`;
+export const STARTER_HINT =
+  "试试这些开始：做一个 AI 客服系统";
+export const STARTER_HINT_STORAGE_KEY = "mira_starter_hint_done";
+/** 与 STARTER_HINT 对应的一键发送文案 */
+export const STARTER_HINT_PROMPT =
+  "我想做一个 AI 客服系统，请先给整体方案，再列出关键步骤和下一步。";

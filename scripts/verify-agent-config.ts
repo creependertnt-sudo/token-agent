@@ -58,7 +58,7 @@ async function main() {
     configPrompt: loaded.systemPrompt,
   });
   assert(composed.includes(marker), "composed prompt includes DB prompt");
-  assert(composed.includes("模型身份：SALES · 销售客服"), "identity still locked");
+  assert(composed.includes("模型身份：SALES · Guide"), "identity still locked");
 
   const version = await prisma.agentConfigVersion.findFirst({
     where: { agentId: sales!.id },

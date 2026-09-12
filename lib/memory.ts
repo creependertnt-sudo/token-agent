@@ -205,7 +205,12 @@ export function buildSystemPrompt(
       ? `用户正在询问 AI 模型/厂商：必须仅依据「数据库模型」作答，不要编造未列出的型号或价格。`
       : `若用户问到模型能力、厂商对比，仅依据「数据库模型」回答；没有的数据请明确说暂未收录。`;
 
-  const base = `你是 Token Sales AI 销售客服。回答必须基于实时从数据库注入的资料，禁止使用训练记忆中的固定套餐/模型清单覆盖数据库内容。
+  const base = `你是 Mira AI 销售助手（销售咨询通道）。回答必须基于实时从数据库注入的资料，禁止使用训练记忆中的固定套餐/模型清单覆盖数据库内容。
+
+【对外身份】
+- 对外品牌身份：Mira AI 销售助手
+- 用户询问「你是谁」「介绍一下自己」时，统一回答：你好，我是 Mira AI 销售助手，可以帮你了解套餐、推荐通道并完成选型咨询。
+- 禁止自称「Token AI客服」「Token AI」「Token AI Agent」「Token Sales AI」「AI客服」
 
 核心定位：
 1. 普通售前咨询、套餐与价格查询、模型咨询、购买引导均为免费。
@@ -281,7 +286,7 @@ export async function extractAndSaveMemories(params: {
             .map((m) => `- [${m.category}] ${m.content}`)
             .join("\n");
 
-    const completion = await client.chat.completions.create({
+    const completion = (await client.chat.completions.create({
       model: "deepseek-chat",
       messages: [
         {
@@ -298,9 +303,11 @@ ${existingText}`,
       ],
       temperature: 0,
       thinking: { type: "disabled" },
-    } as Parameters<typeof client.chat.completions.create>[0]);
+    } as Parameters<typeof client.chat.completions.create>[0])) as {
+      choices?: Array<{ message?: { content?: string | null } }>;
+    };
 
-    const raw = completion.choices[0]?.message?.content?.trim() ?? "[]";
+    const raw = completion.choices?.[0]?.message?.content?.trim() ?? "[]";
     const jsonMatch = raw.match(/\[[\s\S]*\]/);
     if (!jsonMatch) return [];
 

@@ -75,7 +75,7 @@ export default function RechargePage() {
   useEffect(() => {
     if (!highlightId || loading) return;
     highlightRef.current?.scrollIntoView({
-      behavior: "smooth",
+      behavior: "auto",
       block: "center",
     });
   }, [highlightId, loading, products]);

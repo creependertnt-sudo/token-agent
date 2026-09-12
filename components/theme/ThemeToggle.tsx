@@ -4,20 +4,39 @@ import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
 import { authFetch } from "@/lib/client-auth";
 import type { AuthUser } from "@/components/chat/types";
+import styles from "./ThemeToggle.module.css";
 
 export type ThemePreference = "light" | "dark" | "system";
 
-const CYCLE: ThemePreference[] = ["light", "dark", "system"];
+type SwitchTheme = "light" | "dark";
 
-const LABEL: Record<ThemePreference, string> = {
-  light: "白天",
-  dark: "深色",
-  system: "系统",
-};
+/** 切换瞬间禁用 transition 一帧，避免边框第一帧闪烁 */
+function applyThemeWithSync(setTheme: (theme: string) => void, next: SwitchTheme) {
+  const root = document.documentElement;
+  root.classList.add("theme-transitioning");
+  setTheme(next);
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      root.classList.remove("theme-transitioning");
+    });
+  });
+}
 
 function normalizeTheme(value: string | null | undefined): ThemePreference {
-  if (value === "light" || value === "dark" || value === "system") return value;
+  if (value === "light" || value === "dark" || value === "system") {
+    // UI 仅 light/dark；历史 system 收敛到 dark，避免 /chat 被 OS 浅色洗白
+    return value === "system" ? "dark" : value;
+  }
   return "dark";
+}
+
+function toSwitchTheme(
+  theme: string | undefined,
+  resolved: string | undefined,
+): SwitchTheme {
+  const current = normalizeTheme(theme ?? "dark");
+  if (current === "light" || current === "dark") return current;
+  return resolved === "light" ? "light" : "dark";
 }
 
 type Props = {
@@ -27,29 +46,29 @@ type Props = {
 };
 
 /**
- * 右上角主题切换：Light / Dark / System 循环。
- * 登录用户会写入 User.theme。
+ * 主题切换：浅色 / 深色 Segmented Control（滑块选中态）。
+ * 传入 userTheme 时会写入 User.theme；未登录页仅改本地主题。
  */
 export function ThemeToggle({ userTheme, onThemeSaved }: Props) {
   const { theme, setTheme, resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const [saving, setSaving] = useState(false);
+  const shouldPersist = userTheme != null || onThemeSaved != null;
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // 用服务端偏好同步 next-themes（仅挂载后）
   useEffect(() => {
     if (!mounted || !userTheme) return;
     const next = normalizeTheme(userTheme);
     if (theme !== next) setTheme(next);
-    // 只在 userTheme 变化时同步，避免覆盖用户刚点的本地选择
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mounted, userTheme]);
 
-  async function persist(next: ThemePreference) {
-    setTheme(next);
+  async function persist(next: SwitchTheme) {
+    applyThemeWithSync(setTheme, next);
+    if (!shouldPersist) return;
     setSaving(true);
     try {
       const response = await authFetch("/api/user/profile", {
@@ -72,36 +91,59 @@ export function ThemeToggle({ userTheme, onThemeSaved }: Props) {
 
   if (!mounted) {
     return (
-      <button
-        type="button"
-        className="rounded-xl border border-panel-border px-3 py-2 text-xs text-muted"
-        aria-label="主题"
-        disabled
+      <div
+        className={styles.themeSwitch}
+        aria-hidden
+        style={{ visibility: "hidden" }}
       >
-        …
-      </button>
+        <button type="button" tabIndex={-1}>
+          ☀ 浅色
+        </button>
+        <button type="button" tabIndex={-1}>
+          🌙 深色
+        </button>
+      </div>
     );
   }
 
-  const current = normalizeTheme(theme ?? "dark");
-  const icon =
-    resolvedTheme === "light" ? "☀" : resolvedTheme === "dark" ? "☾" : "◐";
+  const active = toSwitchTheme(theme, resolvedTheme);
 
   return (
-    <button
-      type="button"
-      disabled={saving}
-      title={`主题：${LABEL[current]}（点击切换）`}
-      aria-label={`当前主题 ${LABEL[current]}，点击切换`}
-      onClick={() => {
-        const idx = CYCLE.indexOf(current);
-        const next = CYCLE[(idx + 1) % CYCLE.length]!;
-        void persist(next);
-      }}
-      className="inline-flex items-center gap-1.5 rounded-xl border border-panel-border px-3 py-2 text-xs text-muted transition hover:border-accent/40 hover:text-foreground disabled:opacity-60"
+    <div
+      className={styles.themeSwitch}
+      role="group"
+      aria-label="主题"
     >
-      <span aria-hidden>{icon}</span>
-      <span className="hidden sm:inline">{LABEL[current]}</span>
-    </button>
+      <div
+        className={styles.indicator}
+        style={{
+          transform:
+            active === "dark" ? "translateX(100%)" : "translateX(0%)",
+        }}
+        aria-hidden
+      />
+      <button
+        type="button"
+        disabled={saving}
+        data-active={active === "light"}
+        aria-pressed={active === "light"}
+        onClick={() => {
+          if (active !== "light") void persist("light");
+        }}
+      >
+        ☀ 浅色
+      </button>
+      <button
+        type="button"
+        disabled={saving}
+        data-active={active === "dark"}
+        aria-pressed={active === "dark"}
+        onClick={() => {
+          if (active !== "dark") void persist("dark");
+        }}
+      >
+        🌙 深色
+      </button>
+    </div>
   );
 }

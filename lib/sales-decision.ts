@@ -1,4 +1,4 @@
-import { SERVICE_CONFIG } from "@/lib/constants";
+import { getServiceUiLabel, SERVICE_CONFIG } from "@/lib/constants";
 import type { CustomerDemandSignals } from "@/lib/customer-analysis";
 import type { UsageEstimate } from "@/lib/usage-estimator";
 
@@ -265,7 +265,7 @@ export function competitorTalkTrack(mentioned?: string | null): string {
 function buildPromptBlock(decision: Omit<SalesDecision, "promptBlock">): string {
   const rec = decision.recommendation;
   const recLine = rec.primary
-    ? `主推：${rec.primary}（${SERVICE_CONFIG[rec.primary].name}，${SERVICE_CONFIG[rec.primary].cost} Token/次）
+    ? `主推：${getServiceUiLabel(rec.primary)}（${SERVICE_CONFIG[rec.primary].cost} Token/次）
 备选：${rec.alternatives.join(" / ") || "无"}
 理由：${rec.reason}`
     : `暂不直接推荐具体档位。理由：${rec.reason}

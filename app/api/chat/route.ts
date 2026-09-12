@@ -19,6 +19,7 @@ import {
   isChatServiceType,
   sanitizeHistoryForLockedType,
 } from "@/lib/agent-router";
+import { ACTION_CHAIN_CONTINUE_PROMPT } from "@/lib/action-chains";
 import {
   resolveModelRouteByType,
   resolveOpenAIClientOptions,
@@ -124,6 +125,18 @@ export async function POST(req: Request) {
       typeof body?.message === "string" ? body.message.trim() : "";
     const conversationId =
       typeof body?.conversationId === "string" ? body.conversationId : undefined;
+    const actionChainContinue = Boolean(body?.actionChainContinue);
+    const meta =
+      body?.meta && typeof body.meta === "object"
+        ? (body.meta as { chainId?: unknown })
+        : null;
+    const chainId =
+      typeof body?.chainId === "string"
+        ? body.chainId
+        : typeof meta?.chainId === "string"
+          ? meta.chainId
+          : undefined;
+    const inActionChain = Boolean(actionChainContinue || chainId);
 
     const rawServiceType =
       typeof body?.serviceType === "string"
@@ -524,9 +537,20 @@ export async function POST(req: Request) {
           };
 
           const history = [
-            { role: "system" as const, content: `${systemPrompt}
+            {
+              role: "system" as const,
+              content: `${systemPrompt}
 
-${TOOL_USAGE_GUIDE}` },
+${TOOL_USAGE_GUIDE}${
+                inActionChain
+                  ? `
+
+${ACTION_CHAIN_CONTINUE_PROMPT}${
+                      chainId ? `\n当前 chainId：${chainId}` : ""
+                    }`
+                  : ""
+              }`,
+            },
             ...historyWindow,
             lockReminder,
             { role: "user" as const, content: message },

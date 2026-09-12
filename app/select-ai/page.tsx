@@ -2,9 +2,16 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
 import { authFetch } from "@/lib/client-auth";
+import {
+  MODEL_LABEL,
+  SERVICE_UI_HINT,
+  type ChatServiceType,
+} from "@/lib/constants";
+import { AmbientBackground } from "@/components/ui/AmbientBackground";
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
+import styles from "./select-ai.module.css";
 
 type AIServiceItem = {
   id: string;
@@ -16,9 +23,66 @@ type AIServiceItem = {
   sortOrder: number;
 };
 
+function isChatServiceType(type: string): type is ChatServiceType {
+  return type in MODEL_LABEL;
+}
+
+/** 仅展示层文案，不改变 service.type / id / 选择逻辑 */
+const SERVICE_PRESENTATION: Record<
+  ChatServiceType,
+  {
+    icon: string;
+    blurb: string;
+    scenario: string;
+  }
+> = {
+  SALES: {
+    icon: "💬",
+    blurb: "帮助了解套餐、推荐 Token 方案",
+    scenario: "售前咨询、选型问诊、套餐对比",
+  },
+  LIGHT: {
+    icon: "⚡",
+    blurb: "快速问答，适合日常任务",
+    scenario: "短问答、翻译改写、轻量查询",
+  },
+  STANDARD: {
+    icon: "🧠",
+    blurb: "更强分析能力，适合复杂问题",
+    scenario: "业务分析、方案梳理、多轮讨论",
+  },
+  PREMIUM: {
+    icon: "🚀",
+    blurb: "高质量推理，处理复杂任务",
+    scenario: "深度推理、长上下文、高难度任务",
+  },
+};
+
+function presentationFor(service: AIServiceItem) {
+  const type = isChatServiceType(service.type) ? service.type : null;
+  const label = type ? MODEL_LABEL[type] : service.name;
+  const hint = type ? SERVICE_UI_HINT[type] : "";
+  const preset = type ? SERVICE_PRESENTATION[type] : null;
+  return {
+    icon: preset?.icon ?? "✦",
+    title: label,
+    blurb: preset?.blurb ?? service.description ?? "暂无描述",
+    scenario: preset?.scenario ?? "通用对话",
+    hint,
+    label,
+  };
+}
+
+function costLabel(tokenCost: number) {
+  if (tokenCost === 0) return "免费";
+  return `${tokenCost} Token / 次`;
+}
+
 export default function SelectAIPage() {
   const router = useRouter();
-  const { user, loading: authLoading } = useAuth({ requireAuth: true });
+  const { user, loading: authLoading, setUser } = useAuth({
+    requireAuth: true,
+  });
   const [services, setServices] = useState<AIServiceItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectingId, setSelectingId] = useState<string | null>(null);
@@ -47,8 +111,12 @@ export default function SelectAIPage() {
   }, [authLoading, user]);
 
   async function handleSelect(serviceId: string) {
+    // 先更新 UI，再发请求 — 交互要快，而不是优雅
     setSelectingId(serviceId);
     setError(null);
+    await new Promise<void>((resolve) => {
+      requestAnimationFrame(() => resolve());
+    });
 
     try {
       const response = await authFetch("/api/services/select", {
@@ -61,7 +129,7 @@ export default function SelectAIPage() {
         throw new Error(data.error ?? "选择失败");
       }
 
-      router.replace("/");
+      router.replace("/chat");
     } catch (err) {
       setError(err instanceof Error ? err.message : "选择失败");
       setSelectingId(null);
@@ -70,71 +138,142 @@ export default function SelectAIPage() {
 
   if (authLoading || !user || loading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-background text-sm text-muted">
-        加载 AI 服务...
+      <div className="relative flex h-screen items-center justify-center overflow-hidden bg-background text-sm text-muted">
+        <AmbientBackground />
+        <span className="relative">加载 AI 服务...</span>
       </div>
     );
   }
 
-  return (
-    <div className="relative h-screen overflow-y-auto bg-background px-4 py-10">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_10%,rgba(45,212,191,0.12),transparent_30%),radial-gradient(circle_at_80%_0%,rgba(56,189,248,0.08),transparent_28%)]" />
+  const delayClass = [
+    styles.d0,
+    styles.d1,
+    styles.d2,
+    styles.d3,
+    styles.d4,
+    styles.d5,
+  ];
 
-      <div className="relative mx-auto w-full max-w-5xl">
-        <div className="mb-8 text-center md:text-left">
-          <p className="text-[11px] tracking-[0.18em] text-accent uppercase">
-            Choose Agent
-          </p>
-          <h1 className="mt-1 text-2xl font-semibold text-foreground md:text-3xl">
-            选择 AI 服务
+  return (
+    <div className={styles.page}>
+      <AmbientBackground />
+
+      <div className={styles.pageInner}>
+        <div className={styles.topBar}>
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-teal-400/20">
+              <span className="text-lg text-teal-300">✦</span>
+            </div>
+            <span className="text-lg font-medium text-foreground/90">
+              Mira AI
+            </span>
+          </div>
+          <ThemeToggle
+            userTheme={user.theme}
+            onThemeSaved={(theme) => setUser({ ...user, theme })}
+          />
+        </div>
+
+        <div className={styles.hero}>
+          <p className={styles.heroKicker}>MIRA AI</p>
+          <h1 className={styles.heroTitle}>
+            选择你的 <span className={styles.heroAccent}>AI 助手</span>
           </h1>
-          <p className="mt-2 text-sm text-muted">
-            当前账号 {user.email} · 选择后进入对应工作台
+          <p className={styles.heroSubtitle}>
+            Alpha / Beta / Gamma 对应不同能力档位；需要选型时可先选 Guide。
           </p>
+          <p className={styles.heroMeta}>{user.email}</p>
         </div>
 
         {error && (
-          <p className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+          <p className="mb-4 rounded-2xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-sm text-red-500 dark:text-red-300">
             {error}
           </p>
         )}
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {services.map((service, index) => (
-            <motion.button
-              key={service.id}
-              type="button"
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.05 }}
-              disabled={selectingId !== null}
-              onClick={() => void handleSelect(service.id)}
-              className="flex h-full flex-col rounded-3xl border border-panel-border bg-panel p-5 text-left shadow-xl transition hover:border-accent/40 disabled:opacity-60"
-            >
-              <p className="text-[11px] tracking-[0.16em] text-accent uppercase">
-                {service.type}
-              </p>
-              <h2 className="mt-2 text-lg font-semibold text-foreground">
-                {service.name}
-              </h2>
-              <p className="mt-3 flex-1 text-sm leading-6 text-muted">
-                {service.description ?? "暂无描述"}
-              </p>
-              <div className="mt-5 flex items-end justify-between gap-2">
-                <div>
-                  <p className="text-xs text-muted">每次消耗</p>
-                  <p className="text-xl font-semibold text-accent">
-                    {service.tokenCost === 0
-                      ? "免费"
-                      : `${service.tokenCost} Token`}
-                  </p>
-                </div>
-                <span className="rounded-xl bg-accent px-3 py-2 text-xs font-semibold text-[#042f2e]">
-                  {selectingId === service.id ? "进入中..." : "选择"}
-                </span>
+        <div
+          className={`${styles.grid} ${selectingId ? styles.gridSelecting : ""}`}
+        >
+          {services.map((service, index) => {
+            const view = presentationFor(service);
+            const active = selectingId === service.id;
+            const recommended = service.type === "STANDARD";
+            const delay = delayClass[Math.min(index, delayClass.length - 1)];
+            const selectCta = active
+              ? "✔ 当前使用"
+              : `选择 ${view.label}`;
+            const tooltip = [view.label, view.hint, view.blurb]
+              .filter(Boolean)
+              .join(" · ");
+
+            return (
+              <div
+                key={service.id}
+                className={`${styles.cardEnter} ${delay}`}
+              >
+                <button
+                  type="button"
+                  disabled={selectingId !== null}
+                  aria-pressed={active}
+                  aria-label={selectCta}
+                  title={tooltip}
+                  onClick={() => void handleSelect(service.id)}
+                  className={`${styles.card} ${active ? styles.cardActive : ""} ${recommended && !active ? styles.cardRecommended : ""}`}
+                >
+                  <div className={styles.cardInner}>
+                    <div className={styles.topHighlight} aria-hidden />
+                    <div className={styles.cardGlow} aria-hidden />
+
+                    {recommended && !active ? (
+                      <div className={styles.recommend}>推荐</div>
+                    ) : null}
+                    {active ? (
+                      <div className={styles.selectedMark} aria-hidden>
+                        ✔ 已选择
+                      </div>
+                    ) : null}
+
+                    <div className={styles.header}>
+                      <div className={styles.icon} aria-hidden>
+                        {view.icon}
+                      </div>
+                      <div className={styles.badge} title={view.hint || undefined}>
+                        {view.label}
+                      </div>
+                    </div>
+
+                    <div className={styles.body}>
+                      <h3 className={styles.bodyTitle}>{view.title}</h3>
+                      {view.hint ? (
+                        <p className="mb-1 text-[11px] text-teal-400/80">
+                          {view.hint}
+                        </p>
+                      ) : null}
+                      <p className={styles.bodyDesc}>{view.blurb}</p>
+                      <div className={styles.inset}>
+                        <p className="text-[11px] text-muted">适合场景</p>
+                        <p className="mt-0.5 text-sm text-foreground/80">
+                          {view.scenario}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className={styles.footer}>
+                      <div className={styles.footerMeta}>
+                        <p className="text-[11px] text-muted">
+                          {service.tokenCost === 0 ? "价格" : "消耗"}
+                        </p>
+                        <p className={styles.tokenCost}>
+                          {costLabel(service.tokenCost)}
+                        </p>
+                      </div>
+                      <span className={styles.cta}>{selectCta}</span>
+                    </div>
+                  </div>
+                </button>
               </div>
-            </motion.button>
-          ))}
+            );
+          })}
         </div>
 
         {services.length === 0 && !error && (

@@ -14,8 +14,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Token Sales AI 客服",
-  description: "Token 销售 AI 智能客服系统",
+  title: "Mira AI",
+  description:
+    "Mira AI 是一个支持多模型协作、长期记忆和实时语音交互的智能 Agent 客服平台。",
 };
 
 export default function RootLayout({

@@ -452,7 +452,6 @@ export async function runSalesPipeline(
     `[sales:pipeline] intent=${decision.intent} customer=${decision.customerType} level=${customerLevel.level} usage=${usageEstimate.usageLevel} exceed=${usageEstimate.exceedHistory} push=${finalDecision.pushStrategy} cta=${conversion.ctaIntensity} cards=${conversion.showProducts} pkg=${packageRecommend.recommendedPackage?.name ?? "-"} upsell=${upsellCheck.shouldUpsell} rule=${recommendHit?.ruleName ?? "-"} mem=${customerMemory ? "yes" : "no"} orders=${recentOrders.length} consumed=${consumedTokens} balance=${options?.tokenBalance ?? "n/a"} strat=${matchedStrategies.length} kg=${knowledgeHits.length}`,
   );
 
-  const toolResult: { toolName?: string; success?: boolean } | null = null;
   if (options?.userId) {
     try {
       await prisma.agentLog.create({
@@ -460,8 +459,8 @@ export async function runSalesPipeline(
           userId: options.userId,
           message,
           intent: decision.intent,
-          toolUsed: toolResult?.toolName ?? null,
-          toolSuccess: toolResult?.success ?? null,
+          toolUsed: null,
+          toolSuccess: null,
           recommendedPackageId: finalDecision.package?.id ?? null,
           pushStrategy: finalDecision.pushStrategy,
           purchased: false,

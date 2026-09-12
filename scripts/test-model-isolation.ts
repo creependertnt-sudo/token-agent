@@ -89,7 +89,7 @@ function unitTests(): Result[] {
       memories: [],
       tokenBalance: 100,
     });
-    assert(light.includes("LIGHT") || light.includes("A模型"), "identity");
+    assert(light.includes("LIGHT") || light.includes("Alpha"), "identity");
     assert(light.includes("5"), "LIGHT cost in prompt");
     assert(!light.includes("模型身份：PREMIUM"), "LIGHT not PREMIUM");
 
@@ -103,8 +103,13 @@ function unitTests(): Result[] {
         showProducts: false,
       },
     });
-    assert(sales.includes("模型身份：SALES · 销售客服"), "SALES id line");
-    assert(sales.includes("Token AI客服"), "SALES public name");
+    assert(
+      sales.includes("模型身份：SALES · Guide") ||
+        sales.includes("SALES · Guide"),
+      "SALES id line",
+    );
+    assert(sales.includes("Mira AI 销售助手"), "SALES public name");
+    assert(!sales.includes("对外品牌身份：Mira AI 智能助手"), "SALES not 智能助手 brand");
     assert(sales.includes("销售知识库检索结果") || sales.includes("知识库"), "rag slot");
     assert(sales.includes("先判断") || sales.includes("用户需求"), "sales flow");
     assert(sales.includes("禁止说"), "forbid paid identity");
@@ -118,7 +123,13 @@ function unitTests(): Result[] {
       memories: [],
       tokenBalance: 100,
     });
-    assert(standard.includes("模型身份：STANDARD · B模型AI"), "STANDARD id");
+    assert(
+      standard.includes("模型身份：STANDARD · Beta") ||
+        standard.includes("STANDARD · Beta"),
+      "STANDARD id",
+    );
+    assert(standard.includes("Mira AI 智能助手"), "STANDARD public brand");
+    assert(!standard.includes("对外品牌身份：Mira AI 销售助手"), "STANDARD not 销售助手");
     assert(standard.includes("20 Token"), "STANDARD cost");
     assert(!standard.includes("模型身份：PREMIUM"), "STANDARD not PREMIUM");
     assert(standard.includes("禁止自称") && standard.includes("PREMIUM"), "forbid PREMIUM");
@@ -128,9 +139,41 @@ function unitTests(): Result[] {
       memories: [],
       tokenBalance: 100,
     });
-    assert(premium.includes("PREMIUM") && premium.includes("C模型"), "PREMIUM id");
+    assert(premium.includes("PREMIUM") && premium.includes("Gamma"), "PREMIUM id");
     assert(premium.includes("50"), "PREMIUM cost");
+    assert(premium.includes("Mira AI 智能助手"), "PREMIUM public brand");
     assert(!/默认 STANDARD|默认.*STANDARD/i.test(premium), "no default STANDARD");
+
+    const rewrittenSales = buildAgentSystemPrompt({
+      serviceType: "SALES",
+      memories: [],
+      tokenBalance: 100,
+      configPrompt: "你是 Token AI客服。禁止改价。",
+      salesPipelineContext: "保持 Token AI 身份。我是 Token AI客服。",
+    });
+    assert(rewrittenSales.includes("你是 Mira AI 销售助手"), "legacy SALES config rewritten");
+    assert(!/你是 Token AI/.test(rewrittenSales), "no Token AI self-role in SALES");
+    assert(
+      rewrittenSales.includes("对外品牌身份：Mira AI 销售助手"),
+      "SALES identityBlock unique brand",
+    );
+    assert(
+      !rewrittenSales.includes("对外品牌身份：Mira AI 智能助手"),
+      "SALES identityBlock not 智能助手",
+    );
+
+    const rewrittenLight = buildAgentSystemPrompt({
+      serviceType: "LIGHT",
+      memories: [],
+      tokenBalance: 100,
+      configPrompt: "你是 Token AI Agent。",
+    });
+    assert(rewrittenLight.includes("Mira AI 智能助手"), "legacy LIGHT brand rewritten");
+    assert(!/你是 Token AI/.test(rewrittenLight), "no Token AI self-role in LIGHT");
+    assert(
+      !rewrittenLight.includes("对外品牌身份：Mira AI 销售助手"),
+      "LIGHT identityBlock not 销售助手",
+    );
 
     const fixed = enforceTierReply(
       "STANDARD",

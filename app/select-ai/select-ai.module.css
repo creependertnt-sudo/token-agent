@@ -1,0 +1,648 @@
+/* 交互要快，而不是优雅 — 卡片严格 header / body / footer */
+
+@keyframes select-enter {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 12px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+/* 第12步：卡片入场微节奏 */
+@keyframes fadeInUp {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 第0步：内容上移，视觉重心靠上 */
+.page {
+  position: relative;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  overflow-y: auto;
+  background: var(--background, var(--app-bg));
+  padding: 32px 16px 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.pageInner {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 72rem;
+  margin: 0 auto;
+}
+
+.topBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.hero {
+  text-align: left;
+  margin-bottom: 28px;
+  animation: select-enter 160ms ease-out both;
+}
+
+.heroKicker {
+  margin: 0 0 8px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.3em;
+  color: rgba(45, 212, 191, 0.75);
+}
+
+.heroTitle {
+  margin: 0 0 10px;
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+  color: var(--foreground);
+}
+
+.heroAccent {
+  color: #14b8a6;
+}
+
+.heroSubtitle {
+  margin: 0;
+  max-width: 36rem;
+  font-size: 14px;
+  line-height: 1.55;
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.heroMeta {
+  margin: 8px 0 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: rgba(0, 0, 0, 0.45);
+}
+
+:global(.dark) .heroSubtitle,
+:global(html:not(.light)) .heroSubtitle {
+  color: rgba(255, 255, 255, 0.62);
+}
+
+:global(.dark) .heroMeta,
+:global(html:not(.light)) .heroMeta {
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.cardEnter {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  opacity: 0;
+  transform: translateY(6px);
+  animation: fadeInUp 160ms ease forwards;
+}
+
+.d0 {
+  animation-delay: 0ms;
+}
+.d1 {
+  animation-delay: 40ms;
+}
+.d2 {
+  animation-delay: 80ms;
+}
+.d3 {
+  animation-delay: 120ms;
+}
+.d4 {
+  animation-delay: 160ms;
+}
+.d5 {
+  animation-delay: 200ms;
+}
+
+/* 第10步：网格等高、顶部对齐，footer 按钮 baseline 统一 */
+.grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+  align-items: stretch;
+}
+
+@media (min-width: 768px) {
+  .grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.gridSelecting {
+  background: rgba(0, 0, 0, 0.04);
+  border-radius: 24px;
+  padding: 8px;
+}
+
+.gridSelecting .card:not(.cardActive) .cardInner {
+  opacity: 0.75;
+  filter: saturate(0.85);
+}
+
+.card {
+  position: relative;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  border-radius: 20px;
+  overflow: visible;
+  text-align: left;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+
+.cardInner {
+  --card-pad: 20px;
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  height: 100%;
+  min-height: 100%;
+  padding: var(--card-pad);
+  border-radius: 20px;
+  overflow: hidden;
+  background: var(--card-bg);
+  border: 2px solid var(--card-border);
+  box-sizing: border-box;
+  transform: translateZ(0);
+  opacity: 0.85;
+  transition:
+    transform 120ms ease,
+    box-shadow 120ms ease,
+    opacity 120ms ease,
+    background-color 180ms ease,
+    border-color 120ms linear,
+    color 180ms ease;
+}
+
+:global(.dark) .cardInner,
+:global(html:not(.light)) .cardInner {
+  background: rgba(15, 23, 42, 0.88);
+}
+
+.topHighlight {
+  display: none;
+}
+
+.cardInner > * {
+  position: relative;
+  z-index: 1;
+}
+
+.cardGlow {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(
+    circle at 50% 0%,
+    rgba(45, 212, 191, 0.15),
+    transparent 70%
+  );
+  transition: opacity 120ms ease;
+}
+
+.cardActive .cardGlow {
+  opacity: 0.6;
+}
+
+:global(.light) .cardActive .cardGlow {
+  opacity: 0;
+}
+
+/* 第3步 + 第9步：未选中 hover 拉回 + 微上移（120ms ease） */
+.card:hover:not(:disabled):not(.cardActive) .cardInner {
+  opacity: 1;
+  transform: translateY(-2px);
+  border-color: rgba(45, 212, 191, 0.4);
+  background: rgba(15, 23, 42, 0.86);
+}
+
+.card:active:not(:disabled):not(.cardActive) .cardInner {
+  transform: translateY(0) scale(0.98);
+  transition: transform 80ms ease-out;
+}
+
+.cardActive {
+  z-index: 2;
+}
+
+.cardActive .cardInner {
+  opacity: 1;
+  transform: scale(1.015);
+  border-color: #14b8a6;
+  background: rgba(20, 184, 166, 0.12);
+  box-shadow: 0 4px 16px rgba(20, 184, 166, 0.16);
+}
+
+.cardActive:hover .cardInner,
+.cardActive:focus-visible .cardInner {
+  transform: scale(1.015);
+}
+
+/* 第11步：主推荐卡轻锚点 — 不更大更亮，只引导视线 */
+.cardRecommended:not(.cardActive) .cardInner {
+  border-color: rgba(20, 184, 166, 0.6);
+  background: linear-gradient(
+    to bottom,
+    rgba(20, 184, 166, 0.1),
+    rgba(20, 184, 166, 0.04)
+  );
+}
+
+.card:disabled:not(.cardActive) {
+  cursor: not-allowed;
+}
+
+.cardActive:disabled {
+  cursor: wait;
+}
+
+:global(.light) .cardInner {
+  background: #ffffff;
+  border-color: rgba(17, 24, 39, 0.08);
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.05),
+    0 1px 0 rgba(255, 255, 255, 0.9) inset;
+}
+
+:global(.light) .cardRecommended:not(.cardActive) .cardInner {
+  border-color: rgba(20, 184, 166, 0.6);
+  background: linear-gradient(
+    to bottom,
+    rgba(20, 184, 166, 0.1),
+    rgba(20, 184, 166, 0.04)
+  );
+}
+
+.cardInner::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(
+    120deg,
+    transparent 25%,
+    rgba(45, 212, 191, 0.9) 50%,
+    transparent 75%
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 120ms linear;
+  pointer-events: none;
+}
+
+.card:hover:not(:disabled):not(.cardActive) .cardInner::before {
+  opacity: 0.6;
+}
+
+.cardActive .cardInner::before {
+  opacity: 0.85;
+}
+
+.cardInner::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.06),
+    transparent 40%
+  );
+  opacity: 0.6;
+}
+
+:global(.dark) .cardInner::after,
+:global(html:not(.light)) .cardInner::after {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.04),
+    transparent 40%
+  );
+  opacity: 0.5;
+}
+
+:global(.light) .cardInner::after {
+  display: none;
+}
+
+:global(.light) .cardInner::before {
+  content: none;
+  display: none;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  gap: 12px;
+}
+
+.icon {
+  display: flex;
+  height: 2.75rem;
+  width: 2.75rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.75rem;
+  background: rgba(45, 212, 191, 0.12);
+  border: 1px solid rgba(45, 212, 191, 0.15);
+  font-size: 1.25rem;
+}
+
+.badge {
+  flex-shrink: 0;
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.recommend {
+  position: absolute;
+  top: var(--card-pad, 20px);
+  left: var(--card-pad, 20px);
+  z-index: 2;
+  font-size: 12px;
+  font-weight: 500;
+  opacity: 0.7;
+  padding: 0;
+  border-radius: 0;
+  background: none;
+  color: rgba(20, 184, 166, 0.85);
+  pointer-events: none;
+}
+
+.selectedMark {
+  position: absolute;
+  top: var(--card-pad, 20px);
+  right: var(--card-pad, 20px);
+  z-index: 2;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: rgba(20, 184, 166, 0.85);
+  pointer-events: none;
+  opacity: 0.9;
+}
+
+.body {
+  min-height: 120px;
+  display: flex;
+  flex-direction: column;
+}
+
+.bodyTitle {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.8);
+  line-height: 1.4;
+}
+
+.cardActive .bodyTitle {
+  color: #ffffff;
+}
+
+.bodyDesc {
+  margin: 8px 0 0;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+.inset {
+  margin-top: 12px;
+  border-radius: 0.75rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  padding: 0.625rem 0.75rem;
+}
+
+.footer {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: auto;
+  padding-top: 20px;
+}
+
+.footerMeta {
+  flex: 1;
+  min-width: 0;
+}
+
+.tokenCost {
+  color: rgba(45, 212, 191, 0.7);
+  font-size: 1.125rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.cardActive .tokenCost {
+  color: #2dd4bf;
+}
+
+/* 第4步：未选中 outline；卡片 hover 联动；选中实心 */
+.cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  flex-shrink: 0;
+  min-height: 38px;
+  padding: 10px 18px;
+  box-sizing: border-box;
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(45, 212, 191, 0.35);
+  font-size: 0.75rem;
+  font-weight: 600;
+  transition:
+    background 120ms ease,
+    color 120ms ease,
+    border-color 120ms ease,
+    box-shadow 120ms ease,
+    transform 80ms ease;
+}
+
+.card:hover:not(:disabled):not(.cardActive) .cta {
+  background: rgba(20, 184, 166, 0.18);
+  color: #ffffff;
+  border-color: rgba(20, 184, 166, 0.55);
+  transform: translateY(-1px);
+}
+
+.card:hover:not(:disabled):not(.cardActive) .cta:hover {
+  transform: translateY(-1px) scale(0.96);
+}
+
+.cta:active {
+  transform: scale(0.96);
+}
+
+.cardActive .cta,
+.cardActive:hover .cta,
+.cardActive:hover .cta:hover {
+  background: #14b8a6;
+  color: #ffffff;
+  border-color: #14b8a6;
+  box-shadow: 0 4px 12px rgba(20, 184, 166, 0.22);
+  transform: none;
+}
+
+.gridSelecting .card:not(.cardActive) .cta {
+  opacity: 0.7;
+}
+
+:global(.light) .badge {
+  background: rgba(15, 23, 42, 0.06);
+  color: rgba(15, 23, 42, 0.55);
+}
+
+:global(.light) .bodyTitle {
+  color: rgba(15, 23, 42, 0.78);
+}
+
+:global(.light) .cardActive .bodyTitle {
+  color: #0f172a;
+}
+
+:global(.light) .tokenCost {
+  color: rgba(13, 148, 136, 0.7);
+}
+
+:global(.light) .cardActive .tokenCost {
+  color: #0d9488;
+}
+
+:global(.light) .inset {
+  background: rgba(15, 23, 42, 0.03);
+  border-color: rgba(15, 23, 42, 0.05);
+}
+
+:global(.light) .cta {
+  background: transparent;
+  color: #111827;
+  border: 1px solid rgba(20, 184, 166, 0.45);
+  box-shadow: none;
+}
+
+:global(.light) .card:hover:not(:disabled):not(.cardActive) .cta {
+  background: rgba(20, 184, 166, 0.1);
+  color: #0f766e;
+  border-color: #14b8a6;
+  box-shadow: 0 6px 16px rgba(20, 184, 166, 0.25);
+  transform: translateY(-1px);
+}
+
+:global(.light) .card:hover:not(:disabled):not(.cardActive) .cta:hover {
+  background: #14b8a6;
+  color: #ffffff;
+  border-color: #14b8a6;
+  box-shadow: 0 6px 16px rgba(20, 184, 166, 0.25);
+  transform: translateY(-1px) scale(0.96);
+}
+
+:global(.light) .cta:active {
+  transform: scale(0.96);
+}
+
+:global(.light) .cardActive .cta,
+:global(.light) .cardActive:hover .cta,
+:global(.light) .cardActive:hover .cta:hover {
+  background: #14b8a6;
+  color: #ffffff;
+  border-color: #14b8a6;
+  box-shadow: 0 6px 16px rgba(20, 184, 166, 0.25);
+  transform: none;
+}
+
+/* 第5步：浅色 hover 柔和光感 */
+:global(.light) .card:hover:not(:disabled):not(.cardActive) .cardInner {
+  opacity: 1;
+  border-color: rgba(20, 184, 166, 0.45);
+  background: linear-gradient(
+    to bottom,
+    rgba(20, 184, 166, 0.08),
+    rgba(20, 184, 166, 0.02)
+  );
+  box-shadow:
+    0 12px 28px rgba(20, 184, 166, 0.12),
+    0 1px 0 rgba(255, 255, 255, 0.9) inset;
+}
+
+:global(.light) .cardActive .cardInner,
+:global(.light) .cardActive:hover .cardInner,
+:global(.light) .cardActive:focus-visible .cardInner {
+  opacity: 1;
+  transform: scale(1.015);
+  border-color: #14b8a6;
+  background: rgba(20, 184, 166, 0.08);
+  box-shadow: 0 4px 16px rgba(20, 184, 166, 0.16);
+}
+
+:global(.light) .selectedMark {
+  color: #0f766e;
+  opacity: 0.75;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero,
+  .cardEnter {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .cardInner,
+  .cardInner::before,
+  .card:active:not(:disabled) .cardInner,
+  .cta {
+    transition: none;
+  }
+}

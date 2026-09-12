@@ -70,9 +70,9 @@ const SERVICES: Array<{
 }> = [
   {
     id: "svc_sales",
-    name: "Token销售客服",
+    name: "Guide",
     slug: "sales",
-    description: "Token AI 免费销售顾问：需求问诊、模型推荐、知识库 RAG；0 Token",
+    description: "Mira AI 免费销售顾问：需求问诊、模型推荐、知识库 RAG；0 Token",
     type: "SALES",
     tokenCost: 0,
     sortOrder: 1,
@@ -80,7 +80,7 @@ const SERVICES: Array<{
   },
   {
     id: "svc_light",
-    name: "A模型AI",
+    name: "Alpha",
     slug: "light",
     description: "快速思考，适合简单任务，低消耗（对应 DeepSeek Lite）",
     type: "LIGHT",
@@ -90,7 +90,7 @@ const SERVICES: Array<{
   },
   {
     id: "svc_standard",
-    name: "B模型AI",
+    name: "Beta",
     slug: "standard",
     description: "中等能力，适合综合任务，中等消耗（对应 DeepSeek Standard）",
     type: "STANDARD",
@@ -100,7 +100,7 @@ const SERVICES: Array<{
   },
   {
     id: "svc_premium",
-    name: "C模型AI",
+    name: "Gamma",
     slug: "premium",
     description: "最高能力，适合复杂任务，高消耗（对应 DeepSeek Premium）",
     type: "PREMIUM",
@@ -118,8 +118,8 @@ const SALES_KNOWLEDGE: Array<{
 }> = [
   {
     category: "product",
-    title: "Token AI 平台介绍",
-    content: `Token AI 客服是面向个人与团队的 AI Agent 工作台。
+    title: "Mira AI 平台介绍",
+    content: `Mira AI 客服是面向个人与团队的 AI Agent 工作台。
 核心能力：
 1) 四通道分层：SALES（免费销售顾问）、LIGHT（A模型）、STANDARD（B模型）、PREMIUM（C模型）
 2) Token 是平台 AI 服务额度；SALES 咨询免费，付费通道按次固定扣费
@@ -127,7 +127,7 @@ const SALES_KNOWLEDGE: Array<{
 4) 支持会话记忆与按用户数据隔离
 5) 适合售前咨询、开发辅助、技术方案设计等场景
 购买入口：/recharge；通道切换：聊天顶栏。`,
-    keywords: "Token AI,介绍,平台,产品,是什么,客服,agent,工作台",
+    keywords: "Mira AI,介绍,平台,产品,是什么,客服,agent,工作台",
   },
   {
     category: "model_diff",
@@ -177,7 +177,7 @@ PREMIUM / C模型AI · 50 Token/次 · 高级推理
   {
     category: "competitor",
     title: "市面 AI Agent 竞品对比（产品视角）",
-    content: `相比市面常见 AI Agent 平台，Token AI 优势在于：
+    content: `相比市面常见 AI Agent 平台，Mira AI 优势在于：
 
 1. 模型选择：SALES / LIGHT / STANDARD / PREMIUM 分层清晰，职责明确
 2. Token 计费透明度：每通道固定费用，不会因问题变难就自动加价升级
@@ -215,8 +215,8 @@ A: 见竞品对比：分层模型、固定计费、自主切换、数据隔离�
     category: "competitor",
     title: "与 Coze（扣子）的差异说明",
     content: `Coze（扣子）擅长可视化 Bot 编排与插件生态，适合快速搭对话机器人与工作流。
-Token AI 不贬低 Coze。若客户目标是：
-- 透明按次计费、自主切换 LIGHT/STANDARD/PREMIUM → 更匹配 Token AI
+Mira AI 不贬低 Coze。若客户目标是：
+- 透明按次计费、自主切换 LIGHT/STANDARD/PREMIUM → 更匹配 Mira AI
 - 免费售前顾问帮选型 → 用 SALES
 - 以编排/插件市场为主 → 可继续评估 Coze
 话术：先认同「要搭 Agent」的目标，再问更在意编排效率还是计费可控。`,
@@ -226,8 +226,8 @@ Token AI 不贬低 Coze。若客户目标是：
     category: "competitor",
     title: "与 Dify 的差异说明",
     content: `Dify 擅长 LLMOps / 工作流与知识库应用搭建，开发者友好。
-Token AI 不贬低 Dify。差异沟通：
-- 要「多档对话 Agent + 固定 Token 计费 + 顶栏自选档位」→ Token AI
+Mira AI 不贬低 Dify。差异沟通：
+- 要「多档对话 Agent + 固定 Token 计费 + 顶栏自选档位」→ Mira AI
 - 要「可视化工作流/RAG 应用工厂」→ 可评估 Dify
 话术：强调我们卖的是可控计费的分层客服/开发 Agent，不是否定 Dify 的编排价值。`,
     keywords: "Dify,竞品,对比,工作流,RAG,LLMOps",
@@ -236,9 +236,9 @@ Token AI 不贬低 Dify。差异沟通：
     category: "competitor",
     title: "与 FastGPT 的差异说明",
     content: `FastGPT 常见定位是知识库问答与流程编排，适合文档型 Bot。
-Token AI 不贬低 FastGPT。若客户要：
+Mira AI 不贬低 FastGPT。若客户要：
 - 文档知识库问答为主 → FastGPT 类产品可评估
-- 按能力档位计费的开发/架构对话助手 + 售前问诊 → Token AI
+- 按能力档位计费的开发/架构对话助手 + 售前问诊 → Mira AI
 话术：先问「更需要知识库问答，还是多档开发助手」。`,
     keywords: "FastGPT,竞品,对比,知识库,问答",
   },
@@ -246,9 +246,9 @@ Token AI 不贬低 FastGPT。若客户要：
     category: "competitor",
     title: "与 Chatbase 的差异说明",
     content: `Chatbase 常见定位是网站/文档聊天机器人托管，偏客户支持 Bot。
-Token AI 不贬低 Chatbase。差异：
+Mira AI 不贬低 Chatbase。差异：
 - 网站客服 Bot 嵌入 → Chatbase 类可评估
-- 分层 AI 工作台（销售顾问 + A/B/C 开发档位）+ Token 额度 → Token AI
+- 分层 AI 工作台（销售顾问 + A/B/C 开发档位）+ Token 额度 → Mira AI
 话术：按「客服 Bot」还是「开发/方案 Agent」匹配需求。`,
     keywords: "Chatbase,竞品,对比,网站客服,chatbot",
   },
@@ -262,7 +262,7 @@ Token AI 不贬低 Chatbase。差异：
 4. 结束时给下一步：问诊 / 推荐通道 / /recharge
 
 示例：
-「Coze/Dify 很适合做编排和知识库应用。如果您更希望按次透明计费、自己切换 LIGHT/STANDARD/PREMIUM，并先用免费顾问帮您选型，可以看看 Token AI。」`,
+「Coze/Dify 很适合做编排和知识库应用。如果您更希望按次透明计费、自己切换 LIGHT/STANDARD/PREMIUM，并先用免费顾问帮您选型，可以看看 Mira AI。」`,
     keywords: "话术,竞品,不攻击,对比,销售,script",
   },
   {
@@ -458,9 +458,9 @@ async function main() {
       summary: "可视化 Bot 编排与插件生态，适合快速搭建对话机器人与工作流。",
       strengths: "编排效率高、插件生态、上手快、适合运营向 Bot。",
       differences:
-        "Token AI 更强调按次透明计费与 LIGHT/STANDARD/PREMIUM 自主选档，并提供免费 SALES 售前问诊；Coze 更偏编排与插件。",
+        "Mira AI 更强调按次透明计费与 LIGHT/STANDARD/PREMIUM 自主选档，并提供免费 SALES 售前问诊；Coze 更偏编排与插件。",
       talkTrack:
-        "Coze 很适合搭编排型 Bot。如果您更希望计费可控、自己切换能力档位，并先用免费顾问帮选型，可以看看 Token AI。",
+        "Coze 很适合搭编排型 Bot。如果您更希望计费可控、自己切换能力档位，并先用免费顾问帮选型，可以看看 Mira AI。",
       keywords: "Coze,扣子,编排,bot,插件",
     },
     {
@@ -469,9 +469,9 @@ async function main() {
       summary: "LLMOps / 工作流与知识库应用搭建平台，开发者友好。",
       strengths: "工作流、知识库、可观测与应用工厂能力强。",
       differences:
-        "Token AI 侧重分层对话 Agent 与固定 Token 计费；Dify 侧重可视化工作流与 RAG 应用构建。",
+        "Mira AI 侧重分层对话 Agent 与固定 Token 计费；Dify 侧重可视化工作流与 RAG 应用构建。",
       talkTrack:
-        "Dify 很适合做工作流和知识库应用。若您要的是可切换档位的开发/架构对话助手 + 售前选型，Token AI 更贴合。",
+        "Dify 很适合做工作流和知识库应用。若您要的是可切换档位的开发/架构对话助手 + 售前选型，Mira AI 更贴合。",
       keywords: "Dify,工作流,RAG,LLMOps",
     },
     {
@@ -480,9 +480,9 @@ async function main() {
       summary: "常见定位为知识库问答与流程编排，适合文档型 Bot。",
       strengths: "文档知识库问答、流程配置相对直接。",
       differences:
-        "文档问答为主时可评估 FastGPT；多档开发助手 + 计费分层 + 售前顾问更匹配 Token AI。",
+        "文档问答为主时可评估 FastGPT；多档开发助手 + 计费分层 + 售前顾问更匹配 Mira AI。",
       talkTrack:
-        "如果核心是文档知识库问答，FastGPT 值得评估；若还要按能力档位做开发/架构对话，可对比 Token AI。",
+        "如果核心是文档知识库问答，FastGPT 值得评估；若还要按能力档位做开发/架构对话，可对比 Mira AI。",
       keywords: "FastGPT,知识库,问答",
     },
     {
@@ -491,9 +491,9 @@ async function main() {
       summary: "常见定位为网站/文档聊天机器人托管，偏客户支持 Bot。",
       strengths: "网站嵌入客服 Bot、文档训练聊天机器人方便。",
       differences:
-        "网站客服 Bot 可评估 Chatbase；分层 AI 工作台（销售顾问 + A/B/C）与 Token 额度体系是 Token AI 的侧重点。",
+        "网站客服 Bot 可评估 Chatbase；分层 AI 工作台（销售顾问 + A/B/C）与 Token 额度体系是 Mira AI 的侧重点。",
       talkTrack:
-        "若目标是网站客服 Bot，Chatbase 很常见；若要分层开发 Agent 与透明 Token 计费，可以看 Token AI。",
+        "若目标是网站客服 Bot，Chatbase 很常见；若要分层开发 Agent 与透明 Token 计费，可以看 Mira AI。",
       keywords: "Chatbase,网站客服,chatbot",
     },
   ] as const;
@@ -600,7 +600,7 @@ async function main() {
       name: "竞品对比",
       guidelines:
         "只使用 CompetitorKnowledge；先认同客户目标，再讲差异化；不攻击竞品。",
-      talkTrack: "对方也有适用场景；若你要透明按次计费+自主选档，Token AI 更贴合。",
+      talkTrack: "对方也有适用场景；若你要透明按次计费+自主选档，Mira AI 更贴合。",
       forbidden: "禁止贬低 Coze/Dify/FastGPT/Chatbase",
       priority: 100,
     },
@@ -630,8 +630,8 @@ async function main() {
       intent: "GENERAL_CHAT",
       customerType: "*",
       name: "一般咨询",
-      guidelines: "先建立信任与问诊，再进入推荐；保持 Token AI客服 身份。",
-      talkTrack: "我是 Token AI客服，可以帮你选型与了解套餐。",
+      guidelines: "先建立信任与问诊，再进入推荐；保持 Mira AI 销售助手 身份。",
+      talkTrack: "我是 Mira AI 销售助手，可以帮你选型与了解套餐。",
       forbidden: "禁止无脑甩套餐",
       priority: 50,
     },

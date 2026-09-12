@@ -1,4 +1,8 @@
-import { SERVICE_CONFIG, type ChatServiceType } from "@/lib/constants";
+import {
+  MODEL_LABEL,
+  SERVICE_CONFIG,
+  type ChatServiceType,
+} from "@/lib/constants";
 
 export type MessageModelSnapshot = {
   serviceType: string | null;
@@ -81,7 +85,7 @@ export function stripAssistantDisplayMeta(content: string): string {
 
   // 开场身份自我介绍（Header 已展示名称）
   text = text.replace(
-    /^(?:你好[，,！!]?\s*)?我是\s*\**\s*(?:Token\s*)?(?:销售客服|AI\s*客服|[ABC]模型AI|Token AI客服)[^*\n]*\**[^\n]*\n+/u,
+    /^(?:你好[，,！!]?\s*)?我是\s*\**\s*(?:Token\s*)?(?:销售客服|AI\s*客服|[ABC]模型AI|Token AI客服|Mira AI(?:\s*(?:智能助手|销售助手))?)[^*\n]*\**[^\n]*\n+/u,
     "",
   );
   text = text.replace(
@@ -107,15 +111,15 @@ export function stripBillingFooter(content: string): string {
   return stripAssistantDisplayMeta(content);
 }
 
-/** 统一模型行：DeepSeek · PREMIUM · C模型AI */
+/** 统一模型行：DeepSeek · PREMIUM · Gamma */
 export function formatMessageModelLine(
   serviceType?: string | null,
   modelName?: string | null,
 ): string {
   const type = serviceType?.trim() || null;
   const canonical =
-    type && type in SERVICE_CONFIG
-      ? SERVICE_CONFIG[type as ChatServiceType].name
+    type && type in MODEL_LABEL
+      ? MODEL_LABEL[type as ChatServiceType]
       : null;
   const name = canonical || modelName?.trim() || null;
   return ["DeepSeek", type, name].filter(Boolean).join(" · ");
@@ -123,7 +127,7 @@ export function formatMessageModelLine(
 
 /**
  * DB / 消息字段优先；缺失时才从正文页脚解析。
- * 禁止用「当前顶部选择」覆盖。展示名统一 SERVICE_CONFIG。
+ * 禁止用「当前顶部选择」覆盖。展示名统一 MODEL_LABEL。
  */
 export function resolveMessageSnapshot(input: {
   serviceType?: string | null;
@@ -157,10 +161,11 @@ export function resolveMessageSnapshot(input: {
     }
   }
 
-  if (serviceType && serviceType in SERVICE_CONFIG) {
-    const cfg = SERVICE_CONFIG[serviceType as ChatServiceType];
-    modelName = cfg.name;
-    if (tokenCost === null) tokenCost = cfg.cost;
+  if (serviceType && serviceType in MODEL_LABEL) {
+    modelName = MODEL_LABEL[serviceType as ChatServiceType];
+    if (tokenCost === null && serviceType in SERVICE_CONFIG) {
+      tokenCost = SERVICE_CONFIG[serviceType as ChatServiceType].cost;
+    }
   }
 
   return { serviceType, modelName, tokenCost, tokenBalanceAfter };

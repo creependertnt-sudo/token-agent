@@ -94,7 +94,7 @@ export function analyzeCustomerDemand(message: string) {
     techLevel: s.techLevel,
     recommendedModel: null as "LIGHT" | "STANDARD" | "PREMIUM" | null,
     recommendReason: "由 ModelRecommendRule 决定",
-    confidence: "low" as const,
+    confidence: "low" as "low" | "medium" | "high",
     promptBlock: s.promptBlock,
   };
 }
