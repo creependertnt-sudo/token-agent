@@ -1,0 +1,22 @@
+﻿# SSE 回放样本（未闭合 * 与 ` fence）
+# 格式：每行一个 delta.text；按顺序喂给 appendSafeMarkdownStream / onDelta
+
+chunk1: 这里先说一段：**重要点
+chunk2: ，继续说明** 接下来是代码：`js\nconsole.log(
+chunk3: 1);\n` 结束
+
+# 等价 JSON delta 序列：
+event: thinking
+data: {"active":true}
+
+event: delta
+data: {"text":"这里先说一段：**重要点"}
+
+event: delta
+data: {"text":"，继续说明** 接下来是代码：`js\nconsole.log("}
+
+event: delta
+data: {"text":"1);\n` 结束"}
+
+event: done
+data: {"reply":"这里先说一段：**重要点，继续说明** 接下来是代码：`js\nconsole.log(1);\n` 结束","conversationId":"diag","messageId":"diag-1","tokenBalance":0,"freeChatCount":0,"showProducts":false,"products":[],"conversionId":null,"service":{"id":"x","name":"x","type":"LIGHT","tokenCost":0},"messageMeta":{"serviceType":"LIGHT","modelName":"x","tokenCost":0,"tokenBalanceAfter":0},"modelRoute":{"provider":null,"model":null,"serviceType":"LIGHT","tokenCost":0,"displayName":"x","maxTokens":0,"callLlm":true,"label":"x","usedFallback":false},"memoryCount":0,"featureCost":0,"lockedType":"LIGHT","lockedCost":0,"serviceType":"LIGHT","selectedServiceType":"LIGHT","usedServiceType":"LIGHT"}

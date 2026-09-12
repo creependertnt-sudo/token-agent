@@ -1,0 +1,15 @@
+A 补丁 UI 接线（工作区已改，随 chat/conversion 一并入库）
+
+1) components/chat/conversion/MessageList.tsx
+   - StreamSafeContent：streaming → 纯文本/pre（绝不 ChatMarkdown）
+   - done → unescapeAfterStream + ChatMarkdown
+
+2) app/chat/page.tsx
+   - paintStreamContent：content = escapeDuringStream(visibleRaw)
+   - applyDone：fullReply = unescapeAfterStream(data.reply)
+
+3) components/chat/conversion/chat.module.css
+   - .streamCode（未闭合 fence 等宽 pre）
+
+验收：npx tsx scripts/verify-stream-escape.ts
+Perf：请将 Chrome Performance 导出到 docs/stream-diag/perf-after-escape-<iso>.json

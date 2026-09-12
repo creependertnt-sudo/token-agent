@@ -1,0 +1,12 @@
+﻿{
+  "id": "asst_stream_example",
+  "role": "assistant",
+  "content": "这里先说一段：**重要点，继续说明** 接下来是代码：`js\nconsole.log(1);\n` 结束",
+  "createdAt": "2026-09-12T08:00:00.000Z",
+  "streaming": true,
+  "thinking": false,
+  "serviceType": "LIGHT",
+  "modelName": "Mira",
+  "showQuickActions": false,
+  "notes": "流式阶段 MessageList 用 content 纯文本；无 streamPlain 字段；streamPlain 仅为 CSS class"
+}
