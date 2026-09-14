@@ -16,6 +16,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Mira AI",
   description: "多模型 AI 对话系统（Alpha / Beta / Gamma / Guide）",
+  icons: {
+    icon: "/logo.png",
+  },
 };
 
 export default function RootLayout({

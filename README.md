@@ -45,6 +45,10 @@ SESSION_SECRET=your_random_secret_here
 
 打开 [http://localhost:3000](http://localhost:3000)。
 
+## 🧪 Preview
+
+![preview](./public/logo.png)
+
 ## 📦 项目结构
 
 ```
